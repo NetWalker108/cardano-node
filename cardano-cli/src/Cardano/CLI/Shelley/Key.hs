@@ -7,6 +7,21 @@
 -- | Shelley CLI option data types and functions for cryptographic keys.
 module Cardano.CLI.Shelley.Key
   ( VerificationKeyOrFile (..)
+  , InputFormat (..)
+  , InputDecodeError (..)
+  , deserialiseInput
+  , deserialiseInputAnyOf
+  , renderInputDecodeError
+
+  , OutputDirection (..)
+  , writeOutputBech32
+
+  , readKeyFileAnyOf
+  , readKeyFileTextEnvelope
+
+  , readSigningKeyFile
+  , readSigningKeyFileAnyOf
+
   , readVerificationKeyOrFile
   , readVerificationKeyOrTextEnvFile
 
@@ -28,8 +43,12 @@ module Cardano.CLI.Shelley.Key
 import           Cardano.Api
 
 import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Except (runExceptT)
+import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -37,6 +56,72 @@ import qualified Data.Text.Encoding as Text
 
 import           Cardano.CLI.Types
 
+------------------------------------------------------------------------------
+-- Formatted/encoded input deserialisation
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+-- Formatted/encoded output serialisation
+------------------------------------------------------------------------------
+
+-- | Where to write some output.
+data OutputDirection
+  = OutputDirectionStdout
+  -- ^ Write output to @stdout@.
+  | OutputDirectionFile !FilePath
+  -- ^ Write output to a provided file.
+  deriving (Eq, Show)
+
+writeOutputBech32
+  :: SerialiseAsBech32 a
+  => OutputDirection
+  -> a
+  -> IO (Either (FileError ()) ())
+writeOutputBech32 outputDirection a =
+    case outputDirection of
+      OutputDirectionStdout -> Right <$> BSC.putStrLn outputBs
+      OutputDirectionFile fp ->
+        runExceptT $ handleIOExceptT (FileIOError fp) $
+          BS.writeFile fp outputBs
+  where
+    outputBs :: ByteString
+    outputBs = Text.encodeUtf8 (serialiseToBech32 a)
+
+------------------------------------------------------------------------------
+-- Signing key deserialisation
+------------------------------------------------------------------------------
+
+-- | Read a signing key from a file.
+--
+-- The contents of the file can either be Bech32-encoded, hex-encoded, or in
+-- the text envelope format.
+readSigningKeyFile
+  :: forall keyrole.
+     ( HasTextEnvelope (SigningKey keyrole)
+     , SerialiseAsBech32 (SigningKey keyrole)
+     )
+  => AsType keyrole
+  -> SigningKeyFile
+  -> IO (Either (FileError InputDecodeError) (SigningKey keyrole))
+readSigningKeyFile asType (SigningKeyFile fp) =
+  readKeyFile
+    (AsSigningKey asType)
+    (NE.fromList [InputFormatBech32, InputFormatHex, InputFormatTextEnvelope])
+    fp
+
+-- | Read a signing key from a file given that it is one of the provided types
+-- of signing key.
+--
+-- The contents of the file can either be Bech32-encoded or in the text
+-- envelope format.
+readSigningKeyFileAnyOf
+  :: forall b.
+     [FromSomeType SerialiseAsBech32 b]
+  -> [FromSomeType HasTextEnvelope b]
+  -> SigningKeyFile
+  -> IO (Either (FileError InputDecodeError) b)
+readSigningKeyFileAnyOf bech32Types textEnvTypes (SigningKeyFile fp) =
+  readKeyFileAnyOf bech32Types textEnvTypes fp
 
 ------------------------------------------------------------------------------
 -- Verification key deserialisation
