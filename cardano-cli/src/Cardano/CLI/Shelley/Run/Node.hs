@@ -22,7 +22,8 @@ import           Cardano.Api
 import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Commands
-import           Cardano.CLI.Shelley.Key (VerificationKeyOrFile, readVerificationKeyOrFile)
+import           Cardano.CLI.Shelley.Key (OutputDirection (..), VerificationKeyOrFile,
+                   readVerificationKeyOrFile, writeOutputBech32)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 {- HLINT ignore "Reduce duplication" -}
@@ -75,24 +76,27 @@ runNodeKeyGenCold :: VerificationKeyFile
                   -> SigningKeyFile
                   -> OpCertCounterFile
                   -> ExceptT ShelleyNodeCmdError IO ()
-runNodeKeyGenCold (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath)
+runNodeKeyGenCold (VerificationKeyFile vkeyPath)
+                  (SigningKeyFile skeyPath)
                   (OpCertCounterFile ocertCtrPath) = do
     skey <- liftIO $ generateSigningKey AsStakePoolKey
     let vkey = getVerificationKey skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+      $ writeOutputBech32
+          (OutputDirectionFile skeyPath)
+          skey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+      $ writeOutputBech32
+          (OutputDirectionFile vkeyPath)
+          vkey
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope ocertCtrPath (Just ocertCtrDesc)
       $ OperationalCertificateIssueCounter initialCounter vkey
   where
-    skeyDesc, vkeyDesc, ocertCtrDesc :: TextEnvelopeDescr
-    skeyDesc = "Stake Pool Operator Signing Key"
-    vkeyDesc = "Stake Pool Operator Verification Key"
+    ocertCtrDesc :: TextEnvelopeDescr
     ocertCtrDesc = "Next certificate issue number: "
                 <> fromString (show initialCounter)
 
@@ -104,34 +108,36 @@ runNodeKeyGenKES :: VerificationKeyFile
                  -> SigningKeyFile
                  -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyGenKES (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
-    skey <- liftIO $ generateSigningKey AsKesKey
-    let vkey = getVerificationKey skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
-  where
-    skeyDesc, vkeyDesc :: TextEnvelopeDescr
-    skeyDesc = "KES Signing Key"
-    vkeyDesc = "KES Verification Key"
+  skey <- liftIO $ generateSigningKey AsKesKey
+  let vkey = getVerificationKey skey
+  firstExceptT ShelleyNodeCmdWriteFileError
+    . newExceptT
+    $ writeOutputBech32
+        (OutputDirectionFile skeyPath)
+        skey
+  firstExceptT ShelleyNodeCmdWriteFileError
+    . newExceptT
+    $ writeOutputBech32
+        (OutputDirectionFile vkeyPath)
+        vkey
+
 
 runNodeKeyGenVRF :: VerificationKeyFile -> SigningKeyFile
                  -> ExceptT ShelleyNodeCmdError IO ()
 runNodeKeyGenVRF (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) = do
-    skey <- liftIO $ generateSigningKey AsVrfKey
-    let vkey = getVerificationKey skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeFileTextEnvelopeWithOwnerPermissions skeyPath (Just skeyDesc) skey
-    firstExceptT ShelleyNodeCmdWriteFileError
-      . newExceptT
-      $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
-  where
-    skeyDesc, vkeyDesc :: TextEnvelopeDescr
-    skeyDesc = "VRF Signing Key"
-    vkeyDesc = "VRF Verification Key"
+  skey <- liftIO $ generateSigningKey AsVrfKey
+  let vkey = getVerificationKey skey
+  firstExceptT ShelleyNodeCmdWriteFileError
+    . newExceptT
+    $ writeOutputBech32
+        (OutputDirectionFile skeyPath)
+        skey
+  firstExceptT ShelleyNodeCmdWriteFileError
+    . newExceptT
+    $ writeOutputBech32
+        (OutputDirectionFile vkeyPath)
+        vkey
+
 
 runNodeKeyHashVRF :: VerificationKeyOrFile VrfKey
                   -> Maybe OutputFile
@@ -260,4 +266,3 @@ readColdVerificationKeyOrFile coldVerKeyOrFile =
         , FromSomeType (AsVerificationKey AsGenesisDelegateKey) castVerificationKey
         ]
         fp
-
