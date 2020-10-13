@@ -913,7 +913,10 @@ pPoolCmd =
       ]
   where
     pId :: Parser PoolCmd
-    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
+    pId =
+      PoolGetId
+        <$> pStakePoolVerificationKeyOrFile
+        <*> pMaybeOutputFile
 
     pPoolMetadataHashSubCmd :: Parser PoolCmd
     pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
@@ -1790,16 +1793,6 @@ pOperationalCertificateFile =
     <> Opt.metavar "FILE"
     <> Opt.help "Filepath of the node's operational certificate."
     <> Opt.completer (Opt.bashCompleter "file")
-    )
-
-pOutputFormat :: Parser OutputFormat
-pOutputFormat =
-  Opt.option readOutputFormat
-    (  Opt.long "output-format"
-    <> Opt.metavar "STRING"
-    <> Opt.help "Optional output format. Accepted output formats are \"hex\" \
-                \and \"bech32\" (default is \"bech32\")."
-    <> Opt.value OutputFormatBech32
     )
 
 pMaybeOutputFile :: Parser (Maybe OutputFile)
@@ -3329,17 +3322,6 @@ readVerificationKey asType =
     deserialiseFromBech32OrHex str =
       first (Text.unpack . renderInputDecodeError) $
         deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
-
-readOutputFormat :: Opt.ReadM OutputFormat
-readOutputFormat = do
-  s <- Opt.str
-  case s of
-    "hex" -> pure OutputFormatHex
-    "bech32" -> pure OutputFormatBech32
-    _ ->
-      fail $ "Invalid output format: \""
-        <> s
-        <> "\". Accepted output formats are \"hex\" and \"bech32\"."
 
 readURIOfMaxLength :: Int -> Opt.ReadM Text
 readURIOfMaxLength maxLen =

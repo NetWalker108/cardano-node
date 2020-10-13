@@ -332,9 +332,9 @@ data PoolCmd
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
       OutputFile
-  | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
+  | PoolGetId (VerificationKeyOrFile StakePoolKey) (Maybe OutputFile)
   | PoolMetadataHash PoolMetadataFile (Maybe OutputFile)
-  deriving Show
+  deriving (Eq, Show)
 
 renderPoolCmd :: PoolCmd -> Text
 renderPoolCmd cmd =
@@ -517,11 +517,11 @@ data MetadataFile = MetadataFileJSON FilePath
 newtype OutputFile = OutputFile
   { unOutputFile :: FilePath
   }
-  deriving Show
+  deriving (Eq, Show)
 
 newtype PoolMetadataFile = PoolMetadataFile
   { unPoolMetadataFile :: FilePath }
-  deriving Show
+  deriving (Eq, Show)
 
 newtype GenesisDir
   = GenesisDir FilePath
