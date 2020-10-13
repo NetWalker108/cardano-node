@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -7,7 +8,6 @@ module Cardano.CLI.Shelley.Run.Address
   , buildShelleyAddress
   , renderShelleyAddressCmdError
   , runAddressCmd
-  , runAddressKeyGenToFile
   , makeStakeAddressRef
   ) where
 
@@ -193,13 +193,14 @@ buildShelleyAddress vkey mbStakeVerifier nw =
 foldSomeAddressVerificationKey :: (forall keyrole. Key keyrole =>
                                    VerificationKey keyrole -> a)
                                -> SomeAddressVerificationKey -> a
-foldSomeAddressVerificationKey f (AByronVerificationKey           vk) = f vk
-foldSomeAddressVerificationKey f (APaymentVerificationKey         vk) = f vk
-foldSomeAddressVerificationKey f (APaymentExtendedVerificationKey vk) = f vk
-foldSomeAddressVerificationKey f (AGenesisUTxOVerificationKey     vk) = f vk
-foldSomeAddressVerificationKey f (AKesVerificationKey             vk) = f vk
-foldSomeAddressVerificationKey f (AGenesisDelegateExtendedVerificationKey vk) = f vk
-foldSomeAddressVerificationKey f (AGenesisExtendedVerificationKey vk) = f vk
-foldSomeAddressVerificationKey f (AVrfVerificationKey             vk) = f vk
-foldSomeAddressVerificationKey f (AStakeVerificationKey           vk) = f vk
-foldSomeAddressVerificationKey f (AStakeExtendedVerificationKey   vk) = f vk
+foldSomeAddressVerificationKey f = \case
+  AByronVerificationKey vk -> f vk
+  APaymentVerificationKey vk -> f vk
+  APaymentExtendedVerificationKey vk -> f vk
+  AGenesisUTxOVerificationKey vk -> f vk
+  AKesVerificationKey vk -> f vk
+  AGenesisDelegateExtendedVerificationKey vk -> f vk
+  AGenesisExtendedVerificationKey vk -> f vk
+  AVrfVerificationKey vk -> f vk
+  AStakeVerificationKey vk -> f vk
+  AStakeExtendedVerificationKey vk -> f vk
