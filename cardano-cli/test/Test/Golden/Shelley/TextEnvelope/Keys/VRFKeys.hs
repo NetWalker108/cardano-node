@@ -1,15 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Golden.Shelley.TextEnvelope.Keys.VRFKeys
   ( golden_shelleyVRFKeys
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
 import           Control.Monad (void)
 import           Hedgehog (Property)
 import           Test.OptParse
 
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.File as H
+import           Text.Regex.TDFA ((=~))
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -18,25 +21,21 @@ import qualified Hedgehog.Extras.Test.Base as H
 --   3. Check the TextEnvelope serialization format has not changed.
 golden_shelleyVRFKeys :: Property
 golden_shelleyVRFKeys = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
-  -- Reference keys
-  referenceVerKey <- noteInputFile "test/data/golden/shelley/keys/vrf_keys/verification_key"
-  referenceSignKey <- noteInputFile "test/data/golden/shelley/keys/vrf_keys/signing_key"
+  H.note_ tempDir
 
   -- Key filepaths
-  verKey <- noteTempFile tempDir "vrf-verification-key-file"
-  signKey <- noteTempFile tempDir "vrf-signing-key-file"
+  verKeyFile <- noteTempFile tempDir "vrf-verification-key-file"
+  signKeyFile <- noteTempFile tempDir "vrf-signing-key-file"
 
   -- Generate vrf verification key
   void $ execCardanoCLI
     [ "node","key-gen-VRF"
-    , "--verification-key-file", verKey
-    , "--signing-key-file", signKey
+    , "--verification-key-file", verKeyFile
+    , "--signing-key-file", signKeyFile
     ]
 
-  let signingKeyType = textEnvelopeType (AsSigningKey AsVrfKey)
-      verificationKeyType = textEnvelopeType (AsVerificationKey AsVrfKey)
+  verKey <- H.readFile verKeyFile
+  H.assert $ verKey =~ id @String "vrf_vk[a-z0-9]{59}"
 
-  -- Check the newly created files have not deviated from the
-  -- golden files
-  checkTextEnvelopeFormat verificationKeyType referenceVerKey verKey
-  checkTextEnvelopeFormat signingKeyType referenceSignKey signKey
+  signKey <- H.readFile signKeyFile
+  H.assert $ signKey =~ id @String "vrf_sk[a-z0-9]{110}"

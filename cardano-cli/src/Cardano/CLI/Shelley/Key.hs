@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -40,8 +39,6 @@ module Cardano.CLI.Shelley.Key
   , generateKeyPair
   ) where
 
-import           Cardano.Api
-
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (runExceptT)
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
@@ -53,6 +50,8 @@ import qualified Data.List.NonEmpty as NE
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+
+import           Cardano.Api
 
 import           Cardano.CLI.Types
 
@@ -104,7 +103,7 @@ readSigningKeyFile
   -> SigningKeyFile
   -> IO (Either (FileError InputDecodeError) (SigningKey keyrole))
 readSigningKeyFile asType (SigningKeyFile fp) =
-  readKeyFile
+  readFileAnyOfInputFormats
     (AsSigningKey asType)
     (NE.fromList [InputFormatBech32, InputFormatHex, InputFormatTextEnvelope])
     fp
@@ -121,7 +120,7 @@ readSigningKeyFileAnyOf
   -> SigningKeyFile
   -> IO (Either (FileError InputDecodeError) b)
 readSigningKeyFileAnyOf bech32Types textEnvTypes (SigningKeyFile fp) =
-  readKeyFileAnyOf bech32Types textEnvTypes fp
+  readFileBech32OrTextEnvAnyOf bech32Types textEnvTypes fp
 
 ------------------------------------------------------------------------------
 -- Verification key deserialisation
@@ -158,7 +157,7 @@ readVerificationKeyOrFile asType verKeyOrFile =
   case verKeyOrFile of
     VerificationKeyValue vk -> pure (Right vk)
     VerificationKeyFilePath (VerificationKeyFile fp) ->
-      readKeyFile
+      readFileAnyOfInputFormats
         (AsVerificationKey asType)
         (NE.fromList [InputFormatBech32, InputFormatHex, InputFormatTextEnvelope])
         fp
@@ -177,7 +176,7 @@ readVerificationKeyOrTextEnvFile asType verKeyOrFile =
   case verKeyOrFile of
     VerificationKeyValue vk -> pure (Right vk)
     VerificationKeyFilePath (VerificationKeyFile fp) ->
-      readKeyFileTextEnvelope (AsVerificationKey asType) fp
+      readFileTextEnvelope' (AsVerificationKey asType) fp
 
 data PaymentVerifier
   = PaymentVerifierKey VerificationKeyTextOrFile

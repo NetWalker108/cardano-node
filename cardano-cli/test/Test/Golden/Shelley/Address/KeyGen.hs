@@ -28,8 +28,8 @@ golden_shelleyAddressKeyGen = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir 
   void $ H.readFile addressVKeyFile
   void $ H.readFile addressSKeyFile
 
-  H.assertFileOccurences 1 "addr_vk" addressVKeyFile
-  H.assertFileOccurences 1 "addr_sk" addressSKeyFile
+  H.assertFileOccurences 1 "PaymentVerificationKeyShelley_ed25519" addressVKeyFile
+  H.assertFileOccurences 1 "PaymentSigningKeyShelley_ed25519" addressSKeyFile
 
 golden_shelleyAddressExtendedKeyGen :: Property
 golden_shelleyAddressExtendedKeyGen = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
@@ -46,5 +46,5 @@ golden_shelleyAddressExtendedKeyGen = propertyOnce . H.moduleWorkspace "tmp" $ \
   void $ H.readFile addressVKeyFile
   void $ H.readFile addressSKeyFile
 
-  H.assertFileOccurences 1 "addr_xvk" addressVKeyFile
-  H.assertFileOccurences 1 "addr_xsk" addressSKeyFile
+  H.assertFileOccurences 1 "PaymentExtendedVerificationKeyShelley_ed25519_bip32" addressVKeyFile
+  H.assertFileOccurences 1 "PaymentExtendedSigningKeyShelley_ed25519_bip32" addressSKeyFile
