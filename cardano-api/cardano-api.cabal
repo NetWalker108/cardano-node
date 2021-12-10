@@ -215,14 +215,18 @@ test-suite cardano-api-test
                       , bytestring
                       , cardano-api
                       , cardano-api:gen
-                      , cardano-data ^>= 0.1
+                      , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class ^>= 2.0
                       , cardano-crypto-test ^>= 1.4
                       , cardano-crypto-tests ^>= 2.0
+                      , cardano-data ^>= 0.1
                       , cardano-ledger-alonzo ^>= 0.1
                       , cardano-ledger-core ^>= 0.1
+                      , cardano-ledger-shelley ^>= 0.1
+                      , cardano-ledger-shelley-test ^>= 0.1
                       , cardano-slotting ^>= 0.1
+                      , cardano-strict-containers ^>= 0.1
                       , containers
                       , hedgehog
                       , hedgehog-extras ^>= 0.4
@@ -230,11 +234,10 @@ test-suite cardano-api-test
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , QuickCheck
-                      , cardano-ledger-shelley ^>= 0.1
-                      , cardano-ledger-shelley-test ^>= 0.1
                       , tasty
                       , tasty-hedgehog
                       , tasty-quickcheck
+                      , tasty-th
                       , time
 
   other-modules:        Test.Cardano.Api.Crypto
@@ -243,6 +246,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.KeysByron
                         Test.Cardano.Api.Ledger
                         Test.Cardano.Api.Metadata
+                        Test.Cardano.Api.TxBody
                         Test.Cardano.Api.Typed.Address
                         Test.Cardano.Api.Typed.Bech32
                         Test.Cardano.Api.Typed.CBOR
