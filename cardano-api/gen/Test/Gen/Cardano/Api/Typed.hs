@@ -107,6 +107,24 @@ module Test.Gen.Cardano.Api.Typed
   , genRational
   ) where
 
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Short as SBS
+import           Data.Coerce (coerce)
+import           Data.Functor ((<&>))
+import           Data.Int (Int64)
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
+import           Data.Ratio (Ratio, (%))
+import           Data.String (IsString (..))
+import           Data.Word (Word64)
+import           Hedgehog (Gen, Range)
+import qualified Hedgehog.Gen as Gen
+import qualified Hedgehog.Range as Range
+import           Numeric.Natural (Natural)
+
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
@@ -118,27 +136,11 @@ import           Cardano.Api.Shelley (Hash (..), KESPeriod (KESPeriod),
                    StakeCredential (StakeCredentialByKey), StakePoolKey,
                    refInsScriptsAndInlineDatsSupportedInEra)
 
-
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Short as SBS
-import           Data.Coerce
-import           Data.Int (Int64)
-import           Data.Map.Strict (Map)
-import           Data.Ratio (Ratio, (%))
-import           Data.String
-import           Data.Word (Word64)
-import           Numeric.Natural (Natural)
-
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Plutus
-
-import           Hedgehog (Gen, Range)
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
 
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import           Cardano.Ledger.Alonzo.Language (Language (..))
@@ -209,7 +211,7 @@ genSimpleScript =
       , RequireAnyOf <$> Gen.list (Range.linear 0 10) genTerm
 
       , do ts <- Gen.list (Range.linear 0 10) genTerm
-           m  <- Gen.integral (Range.constant 0 (length ts))
+           m  <- Gen.integral (Range.constant 0 (List.length ts))
            return (RequireMOf m ts)
       ]
 
@@ -597,7 +599,11 @@ genTxBodyContent era = do
   txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
   txInsReference <- genTxInsReference era
-  txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext era)
+  txOuts <-
+    Gen.list (Range.constant 1 10) (genTxOutTxContext era)
+    <&> fixDatumHashCollisions
+      -- Without this fix, generated script data may have the same hashes for
+      -- both present (value + hash) and non-present (hash only) values.
   txTotalCollateral <- genTxTotalCollateral era
   txReturnCollateral <- genTxReturnCollateral era
   txFee <- genTxFee era
@@ -631,6 +637,33 @@ genTxBodyContent era = do
     , Api.txMintValue
     , Api.txScriptValidity
     }
+
+
+-- | Ensure that all script data with the same hash are
+-- either all presented as values or all presented as hashes.
+--
+-- It's possible to have a hash without its datum, and also with its datum,
+-- and these two possibilities are semantically equivalent.
+fixDatumHashCollisions :: forall era. [TxOut CtxTx era] -> [TxOut CtxTx era]
+fixDatumHashCollisions outs = map replaceOutHashWithItsDatum outs
+  where
+    replaceOutHashWithItsDatum :: TxOut CtxTx era -> TxOut CtxTx era
+    replaceOutHashWithItsDatum (TxOut address value datum script) =
+      TxOut address value (replaceHashWithItsDatum datum) script
+
+    replaceHashWithItsDatum :: TxOutDatum CtxTx era -> TxOutDatum CtxTx era
+    replaceHashWithItsDatum datum =
+      case datum of
+        TxOutDatumHash _ hash -> fromMaybe datum $ Map.lookup hash hashedData
+        _ -> datum
+
+    hashedData :: Map (Hash ScriptData) (TxOutDatum CtxTx era)
+    hashedData =
+      Map.fromList
+        [ (hashScriptDataBytes scriptData, datum)
+        | TxOut _ _ datum@(TxOutDatumInTx _ scriptData) _ <- outs
+        ]
+
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
 genTxInsCollateral era =
@@ -885,7 +918,7 @@ genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]
 
 _genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
 _genCostModels =
-    Gen.map (Range.linear 0 (length plutusScriptVersions))
+    Gen.map (Range.linear 0 (List.length plutusScriptVersions))
             ((,) <$> Gen.element plutusScriptVersions
                  <*> genCostModel)
   where
