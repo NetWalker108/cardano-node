@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -34,6 +35,7 @@ module Cardano.Api.Eras
   , IsShelleyBasedEra(..)
   , InAnyShelleyBasedEra(..)
   , shelleyBasedToCardanoEra
+  , withShelleyBasedCardanoEra
 
     -- ** Mapping to era types from the Shelley ledger library
   , ShelleyLedgerEra
@@ -364,6 +366,19 @@ instance IsShelleyBasedEra BabbageEra where
 
 instance IsShelleyBasedEra ConwayEra where
    shelleyBasedEra = ShelleyBasedEraConway
+
+-- | Helper function to get an instance from a value
+withShelleyBasedCardanoEra :: ShelleyBasedEra era
+                           -> (IsCardanoEra era => a)
+                           -> a
+withShelleyBasedCardanoEra e a =
+  case e of
+    ShelleyBasedEraShelley -> a
+    ShelleyBasedEraAllegra -> a
+    ShelleyBasedEraMary    -> a
+    ShelleyBasedEraAlonzo  -> a
+    ShelleyBasedEraBabbage -> a
+    ShelleyBasedEraConway  -> a
 
 -- | This pairs up some era-dependent type with a 'ShelleyBasedEra' value that
 -- tells us what era it is, but hides the era type. This is useful when the era

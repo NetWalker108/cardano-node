@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
@@ -208,8 +209,8 @@ runQueryCmd cmd =
       runQueryStakeSnapshot consensusModeParams network allOrOnlyPoolIds mOutFile
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
-    QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
-      runQueryUTxO consensusModeParams qFilter networkId mOutFile
+    QueryUTxO' consensusModeParams qFilter networkId mOutFile jsonOut ->
+      runQueryUTxO consensusModeParams qFilter networkId mOutFile jsonOut
     QueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile ->
       runQueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile
     QueryPoolState' consensusModeParams network poolid ->
@@ -383,9 +384,9 @@ runQueryUTxO
   -> QueryUTxOFilter
   -> NetworkId
   -> Maybe OutputFile
+  -> JsonOutput
   -> ExceptT ShelleyQueryCmdError IO ()
-runQueryUTxO (AnyConsensusModeParams cModeParams)
-             qfilter network mOutFile = do
+runQueryUTxO (AnyConsensusModeParams cModeParams) qfilter network mOutFile jsonOutput = do
   SocketPath sockPath <- lift readEnvSocketPath & onLeft (left . ShelleyQueryCmdEnvVarSocketErr)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
@@ -404,7 +405,7 @@ runQueryUTxO (AnyConsensusModeParams cModeParams)
 
   result <- executeQuery era cModeParams localNodeConnInfo qInMode
 
-  writeFilteredUTxOs sbe mOutFile result
+  writeFilteredUTxOs sbe mOutFile jsonOutput result
 
 runQueryKesPeriodInfo
   :: AnyConsensusModeParams
@@ -958,10 +959,12 @@ writeProtocolState mOutFile ps@(ProtocolState pstate) =
 
 writeFilteredUTxOs :: Api.ShelleyBasedEra era
                    -> Maybe OutputFile
+                   -> JsonOutput
                    -> UTxO era
                    -> ExceptT ShelleyQueryCmdError IO ()
-writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
-    case mOutFile of
+writeFilteredUTxOs shelleyBasedEra' mOutFile (JsonOutput isJsonOutputRequsted) utxo =
+  if isJsonOutputRequsted
+    then case mOutFile of
       Nothing -> liftIO $ printFilteredUTxOs shelleyBasedEra' utxo
       Just (OutputFile fpath) ->
         case shelleyBasedEra' of
@@ -971,10 +974,26 @@ writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
           ShelleyBasedEraAlonzo -> writeUTxo fpath utxo
           ShelleyBasedEraBabbage -> writeUTxo fpath utxo
           ShelleyBasedEraConway -> writeUTxo fpath utxo
+    else case mOutFile of
+      Nothing -> writeJsonUtxoStdout
+      Just (OutputFile fpath) -> writeJsonUtxo fpath
+
  where
-   writeUTxo fpath utxo' =
-     handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
-       $ LBS.writeFile fpath (encodePretty utxo')
+  writeUTxo fpath utxo' =
+    handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
+      $ LBS.writeFile fpath (encodePretty utxo')
+
+  writeJsonUtxo fpath =
+    handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
+    $ LBS.writeFile fpath
+    $ withShelleyBasedCardanoEra shelleyBasedEra'
+    $ encodePretty utxo
+
+  writeJsonUtxoStdout =
+    liftIO
+    $ LBS.putStr
+    $ withShelleyBasedCardanoEra shelleyBasedEra'
+    $ encodePretty utxo
 
 printFilteredUTxOs :: Api.ShelleyBasedEra era -> UTxO era -> IO ()
 printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do

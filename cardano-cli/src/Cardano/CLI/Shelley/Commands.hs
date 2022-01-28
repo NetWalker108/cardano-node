@@ -23,6 +23,7 @@ module Cardano.CLI.Shelley.Commands
   , ByronKeyFormat (..)
   , CardanoAddressKeyType (..)
   , GenesisDir (..)
+  , JsonOutput (..)
   , TxInCount (..)
   , TxOutCount (..)
   , TxShelleyWitnessCount (..)
@@ -344,6 +345,9 @@ renderPoolCmd cmd =
     PoolGetId {} -> "stake-pool id"
     PoolMetadataHash {} -> "stake-pool metadata-hash"
 
+newtype JsonOutput = JsonOutput Bool
+  deriving Show
+
 data QueryCmd =
     QueryLeadershipSchedule
       AnyConsensusModeParams
@@ -358,7 +362,12 @@ data QueryCmd =
   | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
+  | QueryUTxO'
+      AnyConsensusModeParams
+      QueryUTxOFilter
+      NetworkId
+      (Maybe OutputFile)
+      JsonOutput
   | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeSnapshot'

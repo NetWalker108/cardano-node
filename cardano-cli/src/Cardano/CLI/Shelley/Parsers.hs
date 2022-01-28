@@ -975,6 +975,7 @@ pQueryCmd =
         <*> pQueryUTxOFilter
         <*> pNetworkId
         <*> pMaybeOutputFile
+        <*> pJsonOutput
 
     pQueryStakePools :: Parser QueryCmd
     pQueryStakePools =
@@ -997,6 +998,10 @@ pQueryCmd =
         <*> pFilterByStakeAddress
         <*> pNetworkId
         <*> pMaybeOutputFile
+
+    pJsonOutput :: Parser JsonOutput
+    pJsonOutput =
+      JsonOutput <$> switch (long "json" <> Opt.help "Enable JSON output")
 
     pQueryLedgerState :: Parser QueryCmd
     pQueryLedgerState = QueryDebugLedgerState'
@@ -1809,7 +1814,9 @@ pMaybeOutputFile =
       Opt.strOption
         (  Opt.long "out-file"
         <> Opt.metavar "FILE"
-        <> Opt.help "Optional output file. Default is to write to stdout."
+        <> Opt.help
+              "Optional output file. Default is to write to stdout. \
+              \Forces enabling JSON format (--json)."
         <> Opt.completer (Opt.bashCompleter "file")
         )
 
