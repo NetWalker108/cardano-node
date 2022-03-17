@@ -10,34 +10,29 @@
 
 module Test.Cardano.Api.TxBody (tests) where
 
-import           Prelude
-
-import           Data.Type.Equality (testEquality)
-import           Hedgehog (PropertyT, evalEither, forAll, property, tripping, (===))
-import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
--- import           Cardano.Ledger.Alonzo.Data (AuxiliaryData (AuxiliaryData))
-import           Cardano.Ledger.Alonzo.TxBody (adHash)
-import           Data.Maybe.Strict (StrictMaybe (SNothing))
-import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAlonzo)
-
-import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters, TxBody (ShelleyTxBody))
--- import           Cardano.Ledger.Alonzo (AuxiliaryData)
-import           Cardano.Binary (serialize')
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
-import qualified Cardano.Ledger.Core as Ledger
 import           Control.Monad (when)
 import           Data.Bifunctor (second)
 import           Data.Data ((:~:) (..))
 import           Data.Foldable (toList)
 import           Data.Functor ((<&>))
 import qualified Data.List as List
+import           Data.Maybe.Strict (StrictMaybe (SNothing))
+import           Data.Type.Equality (testEquality)
+import           Hedgehog (PropertyT, evalEither, forAll, property, tripping, (===))
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
+
+import           Cardano.Api
+import           Cardano.Api.Shelley (ProtocolParameters, TxBody (ShelleyTxBody))
+import           Cardano.Binary (serialize')
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import           Cardano.Ledger.Alonzo.TxBody (adHash)
+import qualified Cardano.Ledger.Core as Ledger
+
 import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
 
--- import           Gen.Cardano.Api.Typed (genTxBodyContent)
+import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAlonzo)
 
 
 -- * Properties
@@ -149,7 +144,10 @@ normalizeContentOriginal content =
   content
     { txAuxScripts = normalizeAuxScripts $ txAuxScripts content
     , txCertificates = normalizeCertificates $ txCertificates content
-    , txIns = List.sortOn fst $ txIns content
+    , txIns =
+        List.nub -- the same txin provided multiply is OK, ignore copies
+        $ List.sortOn fst
+        $ txIns content
     , txInsCollateral = normalizeInsCollateral $ txInsCollateral content
     , txMetadata = normalizeMetadata $ txMetadata content
     , txMintValue = normalizeMintValue $ txMintValue content
