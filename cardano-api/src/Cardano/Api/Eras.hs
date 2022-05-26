@@ -23,6 +23,7 @@ module Cardano.Api.Eras
   , AnyCardanoEra(..)
   , anyCardanoEra
   , InAnyCardanoEra(..)
+  , withCardanoEra
 
     -- * Deprecated aliases
   , Byron
@@ -366,6 +367,17 @@ instance IsShelleyBasedEra BabbageEra where
 
 instance IsShelleyBasedEra ConwayEra where
    shelleyBasedEra = ShelleyBasedEraConway
+
+-- | Helper function to get an instance from a value
+withCardanoEra :: CardanoEra era -> (IsCardanoEra era => a) -> a
+withCardanoEra e a =
+  case e of
+    ByronEra   -> a
+    ShelleyEra -> a
+    AllegraEra -> a
+    MaryEra    -> a
+    AlonzoEra  -> a
+    BabbageEra -> a
 
 -- | Helper function to get an instance from a value
 withShelleyBasedCardanoEra :: ShelleyBasedEra era
