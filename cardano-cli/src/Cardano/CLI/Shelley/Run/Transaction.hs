@@ -1,7 +1,7 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,9 +20,12 @@ module Cardano.CLI.Shelley.Run.Transaction
 
 import           Control.Monad (forM_, void)
 import           Control.Monad.IO.Class (MonadIO (..))
+import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, hoistEither, hoistMaybe, left,
-                   newExceptT, onNothing)
+                   newExceptT, onLeft, onNothing)
+import           Data.Aeson ((.=))
+import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Bifunctor (Bifunctor (..))
 import qualified Data.ByteString.Char8 as BS
@@ -304,7 +307,7 @@ runTransactionCmd cmd =
     TxCalculateMinRequiredUTxO era pParamSpec txOuts -> runTxCalculateMinRequiredUTxO era pParamSpec txOuts
     TxHashScriptData scriptDataOrFile -> runTxHashScriptData scriptDataOrFile
     TxGetTxId txinfile -> runTxGetTxId txinfile
-    TxView txinfile -> runTxView txinfile
+    TxView txinfile jsonOut -> runTxView txinfile jsonOut
     TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
     TxCreateWitness txBodyfile witSignData mbNw outFile ->
       runTxCreateWitness txBodyfile witSignData mbNw outFile
@@ -1345,26 +1348,40 @@ runTxGetTxId txfile = do
 
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (getTxId txbody)
 
-runTxView :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
-runTxView = \case
-  InputTxBodyFile (TxBodyFile txbodyFilePath) -> do
-    txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
-    unwitnessed <- firstExceptT ShelleyTxCmdCddlError . newExceptT
-                     $ readFileTxBody txbodyFile
-    InAnyCardanoEra era txbody <-
-      case unwitnessed of
-        UnwitnessedCliFormattedTxBody anyTxBody -> pure anyTxBody
-        IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
-          pure $ InAnyCardanoEra era (getTxBody tx)
-    --TODO: Why are we maintaining friendlyTxBodyBS and friendlyTxBS?
-    -- In the case of a transaction body, we can simply call makeSignedTransaction []
-    -- to get a transaction which allows us to reuse friendlyTxBS!
-    liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
-  InputTxFile (TxFile txFilePath) -> do
-    txFile <- liftIO $ fileOrPipe txFilePath
-    InAnyCardanoEra era tx <- firstExceptT ShelleyTxCmdCddlError . newExceptT
-                                $ readFileTx txFile
-    liftIO $ BS.putStr $ friendlyTxBS era tx
+runTxView :: InputTxBodyOrTxFile -> JsonOutput -> ExceptT ShelleyTxCmdError IO ()
+runTxView input (JsonOutput isJsonOutputRequested) =
+  case input of
+    InputTxBodyFile (TxBodyFile txbodyFilePath) -> do
+      txbodyFile <- liftIO $ fileOrPipe txbodyFilePath
+      unwitnessed <- lift (readFileTxBody txbodyFile) & onLeft (left . ShelleyTxCmdCddlError)
+      InAnyCardanoEra era txbody <-
+        case unwitnessed of
+          UnwitnessedCliFormattedTxBody anyTxBody -> pure anyTxBody
+          IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
+            pure $ InAnyCardanoEra era (getTxBody tx)
+      --TODO: Why are we maintaining friendlyTxBodyBS and friendlyTxBS?
+      -- In the case of a transaction body, we can simply call makeSignedTransaction []
+      -- to get a transaction which allows us to reuse friendlyTxBS!
+      if isJsonOutputRequested
+        then liftIO $ LBS.putStr $ prettyTxBodyLBS era txbody
+        else liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
+    InputTxFile (TxFile txFilePath) -> do
+      txFile <- liftIO $ fileOrPipe txFilePath
+      InAnyCardanoEra era tx <- lift (readFileTx txFile) & onLeft (left . ShelleyTxCmdCddlError)
+      if isJsonOutputRequested
+        then liftIO $ LBS.putStr $ prettyTxLBS era tx
+        else liftIO $ BS.putStr $ friendlyTxBS era tx
+
+prettyTxLBS :: CardanoEra era -> Tx era -> LBS.ByteString
+prettyTxLBS era (Tx (TxBody body) witnesses) =
+  encodePretty
+  $ Aeson.object
+  $ withCardanoEra era ["era" .= era, "body" .= body, "witnesses" .= witnesses]
+
+prettyTxBodyLBS :: CardanoEra era -> TxBody era -> LBS.ByteString
+prettyTxBodyLBS era (TxBody body) =
+  encodePretty
+  $ Aeson.object $ withCardanoEra era ["era" .= era, "body" .= body]
 
 
 -- ----------------------------------------------------------------------------

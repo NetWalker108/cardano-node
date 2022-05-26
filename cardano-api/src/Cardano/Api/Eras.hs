@@ -378,6 +378,7 @@ withCardanoEra e a =
     MaryEra    -> a
     AlonzoEra  -> a
     BabbageEra -> a
+    ConwayEra  -> a
 
 -- | Helper function to get an instance from a value
 withShelleyBasedCardanoEra :: ShelleyBasedEra era

@@ -93,7 +93,7 @@ friendlyTxBody
     , "outputs" .= withCardanoEra era (map friendlyTxOut txOuts)
     , "reference inputs" .= friendlyReferenceInputs txInsReference
     , "total collateral" .= friendlyTotalCollateral txTotalCollateral
-    , "return collateral" .= friendlyReturnCollateral txReturnCollateral
+    , "return collateral" .= withCardanoEra era (friendlyReturnCollateral txReturnCollateral)
     , "required signers (payment key hashes needed for scripts)" .=
         friendlyExtraKeyWits txExtraKeyWits
     , "update proposal" .= friendlyUpdateProposal txUpdateProposal
