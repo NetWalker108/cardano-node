@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
@@ -6,9 +7,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -316,6 +320,15 @@ data TxScriptValidity era where
 
 deriving instance Eq   (TxScriptValiditySupportedInEra era)
 deriving instance Show (TxScriptValiditySupportedInEra era)
+
+-- | Public JSON API over CLI
+instance ToJSON (TxScriptValidity era) where
+  toJSON = \case
+    TxScriptValidityNone -> Aeson.Null
+    TxScriptValidity _support validity ->
+      case validity of
+        ScriptInvalid -> "Invalid"
+        ScriptValid -> "Valid"
 
 data TxScriptValiditySupportedInEra era where
   TxScriptValiditySupportedInAlonzoEra  :: TxScriptValiditySupportedInEra AlonzoEra
@@ -1313,6 +1326,9 @@ deriving instance Show a => Show (BuildTxWith build a)
 
 type TxIns build era = [(TxIn, BuildTxWith build (Witness WitCtxTxIn era))]
 
+txInsToJson :: TxIns ViewTx era -> Aeson.Value
+txInsToJson = toJSON . map fst
+
 data TxInsCollateral era where
 
      TxInsCollateralNone :: TxInsCollateral era
@@ -1324,8 +1340,13 @@ data TxInsCollateral era where
 deriving instance Eq   (TxInsCollateral era)
 deriving instance Show (TxInsCollateral era)
 
-data TxInsReference build era where
+-- | Public JSON API over CLI
+instance ToJSON (TxInsCollateral era) where
+  toJSON = \case
+    TxInsCollateralNone -> Aeson.Null
+    TxInsCollateral _support ins -> toJSON ins
 
+data TxInsReference build era where
      TxInsReferenceNone :: TxInsReference build era
 
      TxInsReference     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
@@ -1334,6 +1355,13 @@ data TxInsReference build era where
 
 deriving instance Eq   (TxInsReference build era)
 deriving instance Show (TxInsReference build era)
+
+-- | Public JSON API over CLI
+instance ToJSON (TxInsReference build era) where
+  toJSON = \case
+    TxInsReferenceNone -> Aeson.Null
+    TxInsReference _support ins -> toJSON ins
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
@@ -1440,6 +1468,13 @@ data TxReturnCollateral ctx era where
 deriving instance Eq   (TxReturnCollateral ctx era)
 deriving instance Show (TxReturnCollateral ctx era)
 
+-- | Public JSON API over CLI
+instance IsCardanoEra era => ToJSON (TxReturnCollateral CtxTx era) where
+  toJSON = \case
+    TxReturnCollateralNone -> Aeson.Null
+    TxReturnCollateral _support out -> toJSON out
+
+
 data TxTotalCollateral era where
 
      TxTotalCollateralNone :: TxTotalCollateral era
@@ -1450,6 +1485,13 @@ data TxTotalCollateral era where
 
 deriving instance Eq   (TxTotalCollateral era)
 deriving instance Show (TxTotalCollateral era)
+
+-- | Public JSON API over CLI
+instance ToJSON (TxTotalCollateral era) where
+  toJSON = \case
+    TxTotalCollateralNone -> Aeson.Null
+    TxTotalCollateral _support lovelace -> toJSON lovelace
+
 
 data TxTotalAndReturnCollateralSupportedInEra era where
 
@@ -1553,6 +1595,12 @@ data TxFee era where
 deriving instance Eq   (TxFee era)
 deriving instance Show (TxFee era)
 
+-- | Public JSON API over CLI
+instance ToJSON (TxFee era) where
+  toJSON = \case
+    TxFeeImplicit _support -> Aeson.Null
+    TxFeeExplicit _support lovelace -> toJSON lovelace
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction validity range
@@ -1572,6 +1620,12 @@ data TxValidityUpperBound era where
 deriving instance Eq   (TxValidityUpperBound era)
 deriving instance Show (TxValidityUpperBound era)
 
+-- | Public JSON API over CLI
+instance ToJSON (TxValidityUpperBound era) where
+  toJSON = \case
+    TxValidityNoUpperBound _support -> Aeson.Null
+    TxValidityUpperBound _support slot -> object ["slot" .= slot]
+
 
 data TxValidityLowerBound era where
 
@@ -1583,6 +1637,12 @@ data TxValidityLowerBound era where
 
 deriving instance Eq   (TxValidityLowerBound era)
 deriving instance Show (TxValidityLowerBound era)
+
+-- | Public JSON API over CLI
+instance ToJSON (TxValidityLowerBound era) where
+  toJSON = \case
+    TxValidityNoLowerBound -> Aeson.Null
+    TxValidityLowerBound _support slot -> object ["slot" .= slot]
 
 
 -- ----------------------------------------------------------------------------
@@ -1600,6 +1660,13 @@ data TxMetadataInEra era where
 deriving instance Eq   (TxMetadataInEra era)
 deriving instance Show (TxMetadataInEra era)
 
+-- | Public JSON API over CLI
+instance ToJSON (TxMetadataInEra era) where
+  toJSON = \case
+    TxMetadataNone -> Aeson.Null
+    TxMetadataInEra _support metadata ->
+      metadataToJson TxMetadataJsonDetailedSchema metadata
+
 
 -- ----------------------------------------------------------------------------
 -- Auxiliary scripts (era-dependent)
@@ -1616,6 +1683,13 @@ data TxAuxScripts era where
 deriving instance Eq   (TxAuxScripts era)
 deriving instance Show (TxAuxScripts era)
 
+-- | Public JSON API over CLI
+instance ToJSON (TxAuxScripts era) where
+  toJSON = \case
+    TxAuxScriptsNone -> Aeson.Null
+    TxAuxScripts _support scripts -> toJSON scripts
+
+
 -- ----------------------------------------------------------------------------
 -- Optionally required signatures (era-dependent)
 --
@@ -1630,6 +1704,14 @@ data TxExtraKeyWitnesses era where
 
 deriving instance Eq   (TxExtraKeyWitnesses era)
 deriving instance Show (TxExtraKeyWitnesses era)
+
+-- | Public JSON API over CLI
+instance ToJSON (TxExtraKeyWitnesses era) where
+  toJSON = \case
+    TxExtraKeyWitnessesNone -> Aeson.Null
+    TxExtraKeyWitnesses _support hashes ->
+      toJSON $ map serialiseToRawBytesHexText hashes
+
 
 -- ----------------------------------------------------------------------------
 -- Withdrawals within transactions (era-dependent)
@@ -1646,6 +1728,16 @@ data TxWithdrawals build era where
 
 deriving instance Eq   (TxWithdrawals build era)
 deriving instance Show (TxWithdrawals build era)
+
+-- | Public JSON API over CLI
+instance ToJSON (TxWithdrawals ViewTx era) where
+  toJSON = \case
+    TxWithdrawalsNone -> Aeson.Null
+    TxWithdrawals _support ws ->
+      toJSON
+        [ object ["stakeAddress" .= stakeAddress, "lovelace" .= lovelace]
+        | (stakeAddress, lovelace, ViewTx) <- ws
+        ]
 
 
 -- ----------------------------------------------------------------------------
@@ -1665,6 +1757,12 @@ data TxCertificates build era where
 deriving instance Eq   (TxCertificates build era)
 deriving instance Show (TxCertificates build era)
 
+-- | Public JSON API over CLI
+instance ToJSON (TxCertificates ViewTx era) where
+  toJSON = \case
+    TxCertificatesNone -> Aeson.Null
+    TxCertificates _support certificates ViewTx -> toJSON certificates
+
 
 -- ----------------------------------------------------------------------------
 -- Transaction update proposal (era-dependent)
@@ -1680,6 +1778,12 @@ data TxUpdateProposal era where
 
 deriving instance Eq   (TxUpdateProposal era)
 deriving instance Show (TxUpdateProposal era)
+
+-- | Public JSON API over CLI
+instance ToJSON (TxUpdateProposal era) where
+  toJSON = \case
+    TxUpdateProposalNone -> Aeson.Null
+    TxUpdateProposal _support updateProposal -> toJSON updateProposal
 
 
 -- ----------------------------------------------------------------------------
@@ -1698,6 +1802,12 @@ data TxMintValue build era where
 
 deriving instance Eq   (TxMintValue build era)
 deriving instance Show (TxMintValue build era)
+
+-- | Public JSON API over CLI
+instance ToJSON (TxMintValue ViewTx era) where
+  toJSON = \case
+    TxMintNone -> Aeson.Null
+    TxMintValue _support value ViewTx -> toJSON value
 
 
 -- ----------------------------------------------------------------------------
@@ -1727,6 +1837,31 @@ data TxBodyContent build era =
      }
      deriving (Eq, Show)
 
+-- | Public JSON API over CLI
+instance IsCardanoEra era => ToJSON (TxBodyContent ViewTx era) where
+  toJSON TxBodyContent{..} =
+    Aeson.object
+      [ "ins" .= txInsToJson txIns
+      , "insCollateral" .= txInsCollateral
+      , "insReference" .= txInsReference
+      , "outs" .= txOuts
+      , "totalCollateral" .= txTotalCollateral
+      , "returnCollateral" .= txReturnCollateral
+      , "fee" .= txFee
+      , "validityRange"
+        .= object ["lowerBound" .= lowerBound, "upperBound" .= upperBound]
+      , "metadata" .= txMetadata
+      , "auxScripts" .= txAuxScripts
+      , "extraKeyWits" .= txExtraKeyWits
+        -- txProtocolParams -- not exposed, since is used for building only
+      , "withdrawals" .= txWithdrawals
+      , "certificates" .= txCertificates
+      , "updateProposal" .= txUpdateProposal
+      , "mintValue" .= txMintValue
+      , "scriptValidity" .= txScriptValidity
+      ]
+    where
+      (lowerBound, upperBound) = txValidityRange
 
 -- ----------------------------------------------------------------------------
 -- Transaction bodies
