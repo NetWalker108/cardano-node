@@ -210,6 +210,45 @@ test-suite tx-generator-apitest
                      , transformers-except
                      , tx-generator
 
+test-suite tx-generator-plutustest
+  hs-source-dirs:       test
+  main-is:              PlutusTest.hs
+  type:                 exitcode-stdio-1.0
+  default-language:     Haskell2010
+  ghc-options:          -threaded
+                        -Wall
+                        -rtsopts
+                        "-with-rtsopts=-T"
+
+  build-depends:        base >=4.12 && <5
+                      , aeson
+                      , bytestring
+                      , filepath
+                      , optparse-applicative-fork
+                      , cardano-api
+                      , cardano-cli
+                      , cardano-node
+                      , plutus-scripts-bench
+                      , plutus-tx
+                      , transformers
+                      , transformers-except
+                      , tx-generator
+
+  other-modules:        Paths_tx_generator
+  autogen-modules:      Paths_tx_generator
+
+  build-depends:       base >=4.12 && <5
+                     , aeson
+                     , bytestring
+                     , filepath
+                     , optparse-applicative-fork
+                     , cardano-api
+                     , cardano-cli
+                     , cardano-node
+                     , transformers
+                     , transformers-except
+                     , tx-generator
+
 test-suite tx-generator-test
   import:               project-config
   hs-source-dirs:       test
