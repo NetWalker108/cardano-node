@@ -10,6 +10,8 @@ module Cardano.Benchmarking.PlutusScripts
     , findPlutusScript
     , getAllScripts
     , listPlutusScripts
+    , asAnyLang
+    , normalizeModuleName
     ) where
 
 import           Prelude
