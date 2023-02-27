@@ -7,6 +7,7 @@
 module Cardano.Benchmarking.PlutusScripts.Loop
   ( scriptName
   , scriptSerialized
+  , script
   ) where
 
 import           Language.Haskell.TH
@@ -26,6 +27,9 @@ import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.), (<$>))
 scriptName :: String
 scriptName
   = $(LitE . StringL . loc_module <$> qLocation)
+
+script :: BenchScript
+script = BenchScript scriptName (asAnyLang scriptSerialized)
 
 
 {-# INLINABLE mkValidator #-}

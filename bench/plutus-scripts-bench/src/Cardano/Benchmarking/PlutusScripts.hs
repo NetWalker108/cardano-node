@@ -15,6 +15,7 @@ module Cardano.Benchmarking.PlutusScripts
 import           Prelude
 
 import           Data.ByteString.Lazy as LBS (ByteString)
+import           Data.Maybe(listToMaybe)
 
 import           Cardano.Api
 
@@ -22,29 +23,23 @@ import qualified Cardano.Benchmarking.PlutusScripts.CustomCall as CustomCall
 import qualified Cardano.Benchmarking.PlutusScripts.EcdsaSecp256k1Loop as ECDSA
 import qualified Cardano.Benchmarking.PlutusScripts.Loop as Loop
 import qualified Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop as Schnorr
+import           Cardano.Benchmarking.ScriptAPI
 
 
-getAllScripts ::
-     [(String, (String, ScriptInAnyLang))]
+getAllScripts :: [BenchScript]
 getAllScripts =
-  [ CustomCall.script
-  , let s = nmn CustomCall.scriptName in (s, (s, asAnyLang CustomCall.scriptSerialized))
-  , let s = nmn ECDSA.scriptName in (s, (s, asAnyLang ECDSA.scriptSerialized))
-  , let s = nmn Loop.scriptName in (s, (s, asAnyLang Loop.scriptSerialized))
-  , let s = nmn Schnorr.scriptName in (s, (s, asAnyLang Schnorr.scriptSerialized))
-  ]
-    where nmn = normalizeModuleName
+  [ CustomCall.script, ECDSA.script, Loop.script, Schnorr.script ]
 
 listPlutusScripts ::
      [String]
 listPlutusScripts
-  = fst <$> getAllScripts
+  = psName <$> getAllScripts
 
 findPlutusScript ::
      String
   -> Maybe ScriptInAnyLang
-findPlutusScript
-  = fmap snd . (`lookup` getAllScripts)
+findPlutusScript s
+  = listToMaybe [psScript t | t <- getAllScripts, psName t == s]
 
 encodePlutusScript ::
      ScriptInAnyLang
