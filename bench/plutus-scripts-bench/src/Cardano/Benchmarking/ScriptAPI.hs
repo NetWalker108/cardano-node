@@ -8,24 +8,14 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.ScriptAPI
-  ( BenchScript, psName, psScript
+  ( BenchScript, psName, psScript, mkBenchScript
   )
-  -- ( scriptName
-  -- , scriptSerialized
-  -- , script
-  -- )
   where
 
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax
 import           Prelude as Haskell (String, (.), (<$>))
-
-import           Cardano.Api (ScriptInAnyLang)
+import           Cardano.Api (ScriptInAnyLang, toScriptInAnyLang)
 import           Cardano.Api.Shelley (PlutusScript (..))
 import qualified Data.ByteString.Short as SBS
-import qualified PlutusLedgerApi.V1 as PlutusV1
-import qualified PlutusLedgerApi.V2 as PlutusV2
-import qualified PlutusTx
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
 
 
@@ -35,5 +25,5 @@ data BenchScript
     , psScript :: ScriptInAnyLang
     }
 
-mkBenchScriptV1 :: String -> PlutusScript PlutusScriptV1 -> BenchScript
-mkBenchScriptV1 name body = BenchScript name 
+mkBenchScript :: String -> ScriptInAnyLang -> BenchScript
+mkBenchScript name body = BenchScript name body
