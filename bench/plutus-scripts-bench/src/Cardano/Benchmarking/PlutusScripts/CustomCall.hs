@@ -10,6 +10,7 @@
 module Cardano.Benchmarking.PlutusScripts.CustomCall
   ( scriptName
   , scriptSerialized
+  , script
   ) where
 
 import           Language.Haskell.TH
@@ -23,8 +24,11 @@ import qualified PlutusLedgerApi.V2 as PlutusV2
 import qualified PlutusTx
 import           PlutusTx.Prelude as Plutus hiding (Semigroup (..), (.), (<$>))
 
+import           Cardano.Benchmarking.ScriptAPI
 import           Cardano.Benchmarking.PlutusScripts.CustomCallTypes
 
+script :: BenchScript
+script = BenchScript scriptName (asAnyLang scriptSerialized)
 
 scriptName :: Haskell.String
 scriptName

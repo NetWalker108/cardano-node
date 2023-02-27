@@ -27,7 +27,8 @@ import qualified Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop as Schn
 getAllScripts ::
      [(String, (String, ScriptInAnyLang))]
 getAllScripts =
-  [ let s = nmn CustomCall.scriptName in (s, (s, asAnyLang CustomCall.scriptSerialized))
+  [ CustomCall.script
+  , let s = nmn CustomCall.scriptName in (s, (s, asAnyLang CustomCall.scriptSerialized))
   , let s = nmn ECDSA.scriptName in (s, (s, asAnyLang ECDSA.scriptSerialized))
   , let s = nmn Loop.scriptName in (s, (s, asAnyLang Loop.scriptSerialized))
   , let s = nmn Schnorr.scriptName in (s, (s, asAnyLang Schnorr.scriptSerialized))
