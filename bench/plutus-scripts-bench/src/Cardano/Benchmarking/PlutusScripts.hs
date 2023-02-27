@@ -25,13 +25,14 @@ import qualified Cardano.Benchmarking.PlutusScripts.SchnorrSecp256k1Loop as Schn
 
 
 getAllScripts ::
-     [(String, ScriptInAnyLang)]
+     [(String, (String, ScriptInAnyLang))]
 getAllScripts =
-  [ (normalizeModuleName CustomCall.scriptName, asAnyLang CustomCall.scriptSerialized)
-  , (normalizeModuleName ECDSA.scriptName     , asAnyLang ECDSA.scriptSerialized)
-  , (normalizeModuleName Loop.scriptName      , asAnyLang Loop.scriptSerialized)
-  , (normalizeModuleName Schnorr.scriptName   , asAnyLang Schnorr.scriptSerialized)
+  [ let s = nmn CustomCall.scriptName in (s, (s, asAnyLang CustomCall.scriptSerialized))
+  , let s = nmn ECDSA.scriptName in (s, (s, asAnyLang ECDSA.scriptSerialized))
+  , let s = nmn Loop.scriptName in (s, (s, asAnyLang Loop.scriptSerialized))
+  , let s = nmn Schnorr.scriptName in (s, (s, asAnyLang Schnorr.scriptSerialized))
   ]
+    where nmn = normalizeModuleName
 
 listPlutusScripts ::
      [String]
@@ -42,7 +43,7 @@ findPlutusScript ::
      String
   -> Maybe ScriptInAnyLang
 findPlutusScript
-  = (`lookup` getAllScripts)
+  = fmap snd . (`lookup` getAllScripts)
 
 encodePlutusScript ::
      ScriptInAnyLang
