@@ -14,7 +14,7 @@ import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
 import           Prelude hiding (pred, ($), (&&), (<), (==))
 
-import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1, Script(..), toScriptInAnyLang)
+import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1, Script(..), toScriptInAnyLang, PlutusScriptVersion(..))
 import           Cardano.Benchmarking.ScriptAPI
 import qualified Data.ByteString.Short as SBS
 
@@ -29,7 +29,7 @@ scriptName
   = $(LitE . StringL . loc_module <$> qLocation)
 
 script :: BenchScript
-script = mkBenchScript scriptName (toScriptInAnyLang (PlutusScript undefined scriptSerialized))
+script = mkBenchScript scriptName (toScriptInAnyLang (PlutusScript PlutusScriptV1 scriptSerialized))
 
 
 {-# INLINABLE mkValidator #-}
