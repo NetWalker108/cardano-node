@@ -109,6 +109,9 @@ main
         case plutusType <$> plutus of
           Just LimitSaturationLoop  -> checkPlutusLoop plutus
           Just BenchCustomCall      -> checkPlutusBuiltin
+          Just BenchLoop            -> checkPlutusBenchLoop
+          Just BenchECDSA           -> checkPlutusBenchECDSA
+          Just BenchSchnorr         -> checkPlutusBenchSchnorr
           _                         -> pure ()
         exitSuccess
 
