@@ -4,11 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Cardano.Benchmarking.PlutusScripts.Loop
-  ( scriptName
-  , scriptSerialized
-  , script
-  ) where
+module Cardano.Benchmarking.PlutusScripts.Loop (script) where
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax

@@ -7,11 +7,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.Benchmarking.PlutusScripts.CustomCall
-  ( scriptName
-  , scriptSerialized
-  , script
-  ) where
+module Cardano.Benchmarking.PlutusScripts.CustomCall (script) where
 
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax
