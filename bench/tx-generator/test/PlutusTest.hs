@@ -10,6 +10,7 @@
 
 module Main (main) where
 
+import           Control.Arrow
 import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
@@ -71,7 +72,7 @@ main
         -- such as genesis / node config .json
         let
             msg = case Opt.execParserPure Opt.defaultPrefs infoCommandLine [] of
-                Opt.Failure f   -> fst $ Opt.renderFailure f "tx-generator-apitest"
+                Opt.Failure f   -> fst $ Opt.renderFailure f "tx-generator-plutustest"
                 _               -> ""
         putStrLn msg
         exitSuccess
@@ -110,8 +111,8 @@ main
           Just LimitSaturationLoop  -> checkPlutusLoop plutus
           Just BenchCustomCall      -> checkPlutusBuiltin
           Just BenchLoop            -> checkPlutusBenchLoop
-          Just BenchECDSA           -> checkPlutusBenchECDSA
-          Just BenchSchnorr         -> checkPlutusBenchSchnorr
+          -- Just BenchECDSA           -> checkPlutusBenchECDSA
+          -- Just BenchSchnorr         -> checkPlutusBenchSchnorr
           _                         -> pure ()
         exitSuccess
 
@@ -151,6 +152,22 @@ checkPlutusBuiltin
 
     toApiData :: CustomCallArg -> ScriptData
     toApiData = fromPlutusData . PlutusTx.toData
+
+checkPlutusBenchLoop :: IO ()
+checkPlutusBenchLoop
+  = do script <- return . maybe (error "Error: Loop.hs not found") id
+                        $ findPlutusScript "Loop.hs"
+       putStrLn "* serialisation of built-in Plutus script:"
+       BSL.putStrLn $ encodePlutusScript script
+       protoParams <- readProtocolParametersOrDie
+       redeemerFile <- getDataFileName "loop.redeemer.json"
+       let count = 1_792
+       redeemer <- readScriptData redeemerFile
+                     >>= (die . show)
+                         ||| (return . scriptDataModifyNumber (+count))
+       case preExecutePlutusScript protoParams script (ScriptDataNumber 0) redeemer of
+         Left err -> putStrLn $ "--> execution failed: " ++ show err
+         Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
 
 checkPlutusLoop ::
      Maybe TxGenPlutusParams
