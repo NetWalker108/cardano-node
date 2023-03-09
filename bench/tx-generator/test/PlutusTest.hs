@@ -13,7 +13,7 @@ module Main (main) where
 import           Control.Arrow
 import           Control.Monad
 import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
+import           Control.Monad.Trans.Except.Extra hiding (right)
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
 import           Data.List (sortOn)
@@ -135,11 +135,12 @@ checkPlutusBuiltin
 
     protocolParameters <- readProtocolParametersOrDie
     forM_ bArgs $ \bArg -> do
-      let apiData = toApiData bArg
+      let apiData' = unsafeHashableScriptData apiData
+          apiData = toApiData bArg
       putStrLn $ "* executing with mode: " ++ show (fst bArg)
       putStrLn "* custom script data in Cardano API format:"
-      BSL.putStrLn $ encode $ scriptDataToJson ScriptDataJsonDetailedSchema apiData
-      case preExecutePlutusScript protocolParameters script apiData apiData of
+      BSL.putStrLn $ encode $ scriptDataToJson ScriptDataJsonDetailedSchema apiData'
+      case preExecutePlutusScript protocolParameters script apiData apiData' of
         Left err -> putStrLn $ "--> execution failed: " ++ show err
         Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
   where
@@ -162,10 +163,10 @@ checkPlutusBenchLoop
        protoParams <- readProtocolParametersOrDie
        redeemerFile <- getDataFileName "loop.redeemer.json"
        let count = 1_792
-       redeemer <- readScriptData redeemerFile
+       redeemer <- liftM (right getScriptData) (readScriptData redeemerFile)
                      >>= (die . show)
                          ||| (return . scriptDataModifyNumber (+count))
-       case preExecutePlutusScript protoParams script (ScriptDataNumber 0) redeemer of
+       case preExecutePlutusScript protoParams script (ScriptDataNumber 0) (unsafeHashableScriptData redeemer) of
          Left err -> putStrLn $ "--> execution failed: " ++ show err
          Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
 
@@ -181,7 +182,7 @@ checkPlutusBenchECDSA
        redeemerFile <- getDataFileName "ecdsa-secp256k1-loop.redeemer.json"
 
        let count = 1_792
-       redeemer <- readScriptData redeemerFile
+       redeemer <- liftM (right getScriptData) (readScriptData redeemerFile)
                      >>= (die . show)
                          ||| (return . scriptDataModifyNumber (+count))
 
@@ -193,7 +194,9 @@ checkPlutusBenchECDSA
                                   ScriptDataBytes _] -> return ()
          _ -> die $ show redeemer
 
-       case preExecutePlutusScript protoParams script (ScriptDataNumber 0) redeemer of
+       let zero      = ScriptDataNumber 0
+           redeemer' = unsafeHashableScriptData redeemer
+       case preExecutePlutusScript protoParams script zero redeemer' of
          Left err -> putStrLn $ "--> execution failed: " ++ show err
          Right units -> putStrLn $ "--> execution successful; "
                                    ++ "got budget: " ++ show units
@@ -214,9 +217,11 @@ checkPlutusLoop (Just PlutusOn{..})
       Left err -> die (show err)
       Right redeemer -> do
         putStrLn $ "--> read redeemer: " ++ redeemerFile
-        return $ scriptDataModifyNumber (+ count) redeemer
+        return . scriptDataModifyNumber (+count) $ getScriptData redeemer
 
-    case preExecutePlutusScript protocolParameters script (ScriptDataNumber 0) redeemer of
+    let zero      = ScriptDataNumber 0
+        redeemer' = unsafeHashableScriptData redeemer
+    case preExecutePlutusScript protocolParameters script zero redeemer' of
       Left err -> putStrLn $ "--> execution failed: " ++ show err
       Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
 
@@ -227,7 +232,8 @@ checkPlutusLoop (Just PlutusOn{..})
         autoBudget = PlutusAutoBudget
           { autoBudgetUnits = budget
           , autoBudgetDatum = ScriptDataNumber 0
-          , autoBudgetRedeemer = scriptDataModifyNumber (const 1_000_000) redeemer
+          , autoBudgetRedeemer = unsafeHashableScriptData
+                         $ scriptDataModifyNumber (const 1_000_000) redeemer
           }
 
         pparamsStepFraction d = case protocolParamMaxBlockExUnits protocolParameters of
