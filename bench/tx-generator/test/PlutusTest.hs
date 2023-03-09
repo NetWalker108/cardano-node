@@ -111,7 +111,7 @@ main
           Just LimitSaturationLoop  -> checkPlutusLoop plutus
           Just BenchCustomCall      -> checkPlutusBuiltin
           Just BenchLoop            -> checkPlutusBenchLoop
-          -- Just BenchECDSA           -> checkPlutusBenchECDSA
+          Just BenchECDSA           -> checkPlutusBenchECDSA
           -- Just BenchSchnorr         -> checkPlutusBenchSchnorr
           _                         -> pure ()
         exitSuccess
@@ -168,6 +168,35 @@ checkPlutusBenchLoop
        case preExecutePlutusScript protoParams script (ScriptDataNumber 0) redeemer of
          Left err -> putStrLn $ "--> execution failed: " ++ show err
          Right units -> putStrLn $ "--> execution successful; got budget: " ++ show units
+
+-- The redeemer needs to be a 4-tuple for ECDSA where it was just an
+-- integer for the plain loop.
+checkPlutusBenchECDSA :: IO ()
+checkPlutusBenchECDSA
+  = do script <- return . maybe (error "Error: EcdsaSecp256k1Loop.hs not found") id
+                        $ findPlutusScript "EcdsaSecp256k1Loop.hs"
+       putStrLn "* serialisation of built-in Plutus script:"
+       BSL.putStrLn $ encodePlutusScript script
+       protoParams <- readProtocolParametersOrDie
+       redeemerFile <- getDataFileName "ecdsa-secp256k1-loop.redeemer.json"
+
+       let count = 1_792
+       redeemer <- readScriptData redeemerFile
+                     >>= (die . show)
+                         ||| (return . scriptDataModifyNumber (+count))
+
+       -- check that the redeemer is of the appropriate shape for ECDSA
+       case redeemer of
+         ScriptDataConstructor 0 [ScriptDataNumber _,
+                                  ScriptDataBytes _,
+                                  ScriptDataBytes _,
+                                  ScriptDataBytes _] -> return ()
+         _ -> die $ show redeemer
+
+       case preExecutePlutusScript protoParams script (ScriptDataNumber 0) redeemer of
+         Left err -> putStrLn $ "--> execution failed: " ++ show err
+         Right units -> putStrLn $ "--> execution successful; "
+                                   ++ "got budget: " ++ show units
 
 checkPlutusLoop ::
      Maybe TxGenPlutusParams
