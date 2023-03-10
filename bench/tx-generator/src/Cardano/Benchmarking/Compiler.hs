@@ -10,7 +10,7 @@ where
 import           Prelude
 
 import           Control.Monad
-import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Class (MonadTrans (..))
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.CPS
 import           Data.ByteString as BS (ByteString)
