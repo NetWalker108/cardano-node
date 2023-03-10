@@ -132,6 +132,12 @@ golden_view_shelley = let
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
     diffVsGoldenFile result "test/data/golden/shelley/transaction-view.out"
 
+    -- JSON version
+    resultJson <-
+      execCardanoCLI
+        ["transaction", "view", "--json", "--tx-body-file", transactionBodyFile]
+    diffVsGoldenFile resultJson "test/data/golden/shelley/transaction-view.json"
+
 golden_view_allegra :: Property
 golden_view_allegra =
   propertyOnce $
@@ -231,6 +237,12 @@ golden_view_mary =
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
     diffVsGoldenFile result "test/data/golden/mary/transaction-view.out"
 
+    -- JSON version
+    resultJson <-
+      execCardanoCLI
+        ["transaction", "view", "--json", "--tx-body-file", transactionBodyFile]
+    diffVsGoldenFile resultJson "test/data/golden/mary/transaction-view.json"
+
 createAlonzoTxBody :: Maybe FilePath -> FilePath -> Integration ()
 createAlonzoTxBody mUpdateProposalFile transactionBodyFile = do
   void $
@@ -316,3 +328,9 @@ golden_view_alonzo_signed =
         execCardanoCLI
           ["transaction", "view", "--tx-file", transactionFile]
       diffVsGoldenFile result (testData </> "signed-transaction-view.out")
+
+      -- JSON version
+      resultJson <-
+        execCardanoCLI
+          ["transaction", "view", "--json", "--tx-file", transactionFile]
+      diffVsGoldenFile resultJson (testData </> "signed-transaction-view.json")
