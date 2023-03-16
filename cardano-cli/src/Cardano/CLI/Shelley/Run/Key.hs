@@ -10,6 +10,8 @@ module Cardano.CLI.Shelley.Run.Key
 
     -- * Exports for testing
   , decodeBech32
+  , readSigningKeyFile
+  , withSomeSigningKey
   ) where
 
 import           Control.Exception (Exception (..), IOException)
@@ -39,7 +41,7 @@ import qualified Cardano.Ledger.Keys as Shelley
 import           Cardano.Api
 import qualified Cardano.Api.Byron as ByronApi
 import           Cardano.Api.Crypto.Ed25519Bip32 (Ed25519Bip32DSIGN, SignKeyDSIGN (..),
-                     VerKeyDSIGN (..))
+                   VerKeyDSIGN (..))
 import           Cardano.Api.Shelley
 
 import qualified Cardano.CLI.Byron.Key as Byron
