@@ -16,7 +16,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra hiding (right)
 import           Data.Aeson (FromJSON, eitherDecodeFileStrict', encode)
 import qualified Data.ByteString.Lazy.Char8 as BSL (putStrLn)
-import           Data.List (sortOn)
+import           Data.List (sortOn, intersperse)
 import           Data.Ord (comparing)
 import           GHC.Natural (Natural)
 import           Options.Applicative as Opt
@@ -112,7 +112,7 @@ main
           Just BenchCustomCall      -> checkPlutusBuiltin
           Just BenchLoop            -> checkPlutusBenchLoop
           Just BenchECDSA           -> checkPlutusBenchECDSA
-          -- Just BenchSchnorr         -> checkPlutusBenchSchnorr
+          Just BenchSchnorr         -> checkPlutusBenchSchnorr
           _                         -> pure ()
         exitSuccess
 
@@ -161,7 +161,7 @@ checkPlutusBenchLoop
        putStrLn "* serialisation of built-in Plutus script:"
        BSL.putStrLn $ encodePlutusScript script
        protoParams <- readProtocolParametersOrDie
-       redeemerFile <- getDataFileName "loop.redeemer.json"
+       redeemerFile <- getDataFileName "data/loop.redeemer.json"
        let count = 1_792
        redeemer <- liftM (right getScriptData) (readScriptData redeemerFile)
                      >>= (die . show)
@@ -174,12 +174,12 @@ checkPlutusBenchLoop
 -- integer for the plain loop.
 checkPlutusBenchECDSA :: IO ()
 checkPlutusBenchECDSA
-  = do script <- return . maybe (error "Error: EcdsaSecp256k1Loop.hs not found") id
+  = do script <- return . maybe (error $ "Error: EcdsaSecp256k1Loop.hs not found! " ++ concat (intersperse " " listPlutusScripts)) id
                         $ findPlutusScript "EcdsaSecp256k1Loop.hs"
-       putStrLn "* serialisation of built-in Plutus script:"
+       putStrLn "* serialisation of built-in Plutus ECDSA script:"
        BSL.putStrLn $ encodePlutusScript script
        protoParams <- readProtocolParametersOrDie
-       redeemerFile <- getDataFileName "ecdsa-secp256k1-loop.redeemer.json"
+       redeemerFile <- getDataFileName "data/ecdsa-secp256k1-loop.redeemer.json"
 
        let count = 1_792
        redeemer <- liftM (right getScriptData) (readScriptData redeemerFile)
@@ -187,6 +187,35 @@ checkPlutusBenchECDSA
                          ||| (return . scriptDataModifyNumber (+count))
 
        -- check that the redeemer is of the appropriate shape for ECDSA
+       case redeemer of
+         ScriptDataConstructor 0 [ScriptDataNumber _,
+                                  ScriptDataBytes _,
+                                  ScriptDataBytes _,
+                                  ScriptDataBytes _] -> return ()
+         _ -> die $ show redeemer
+
+       let zero      = ScriptDataNumber 0
+           redeemer' = unsafeHashableScriptData redeemer
+       case preExecutePlutusScript protoParams script zero redeemer' of
+         Left err -> putStrLn $ "--> execution failed: " ++ show err
+         Right units -> putStrLn $ "--> execution successful; "
+                                   ++ "got budget: " ++ show units
+
+checkPlutusBenchSchnorr :: IO ()
+checkPlutusBenchSchnorr
+  = do script <- return . maybe (error $ "Error: SchnorrSecp256k1Loop.hs not found! " ++ concat (intersperse " " listPlutusScripts)) id
+                        $ findPlutusScript "SchnorrSecp256k1Loop.hs"
+       putStrLn "* serialisation of built-in Plutus Schnorr script:"
+       BSL.putStrLn $ encodePlutusScript script
+       protoParams <- readProtocolParametersOrDie
+       redeemerFile <- getDataFileName "data/schnorr-secp256k1-loop.redeemer.json"
+
+       let count = 1_792
+       redeemer <- liftM (right getScriptData) (readScriptData redeemerFile)
+                     >>= (die . show)
+                         ||| (return . scriptDataModifyNumber (+count))
+
+       -- check that the redeemer is of the appropriate shape for Schnorr
        case redeemer of
          ScriptDataConstructor 0 [ScriptDataNumber _,
                                   ScriptDataBytes _,

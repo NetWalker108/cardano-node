@@ -77,6 +77,8 @@ library
   -- Non-IOG dependencies
   ------------------------
   build-depends:
+    , text
     , bytestring
     , serialise
     , template-haskell
+    , filepath

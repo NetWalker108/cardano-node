@@ -17,7 +17,9 @@ module Cardano.Benchmarking.PlutusScripts
 import           Prelude
 
 import           Data.ByteString.Lazy as LBS (ByteString)
+import           Data.Text(split, pack)
 import           Data.Maybe(listToMaybe)
+import           System.FilePath(takeBaseName)
 
 import           Cardano.Api
 
@@ -41,7 +43,7 @@ findPlutusScript ::
      String
   -> Maybe ScriptInAnyLang
 findPlutusScript s
-  = listToMaybe [psScript t | t <- getAllScripts, psName t == s]
+  = listToMaybe [psScript t | t <- getAllScripts, last (split (=='.') . pack $ (psName t)) == pack (takeBaseName s)]
 
 encodePlutusScript ::
      ScriptInAnyLang
