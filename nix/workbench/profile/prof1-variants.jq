@@ -271,10 +271,7 @@ def all_profile_variants:
    ({ generator:
       { plutus:
           { type:                       "LimitSaturationLoop"
-          , script:
-            { constructor: 1
-            , fields:                   ["v1/loop.plutus"]
-            }
+          , script: { "Right": "v1/loop.plutus" }
           , redeemer:
             { "int": 1000000 }
           }
@@ -286,10 +283,7 @@ def all_profile_variants:
    ({ generator:
       { plutus:
           { type:                      "LimitTxPerBlock_8"
-          , script:
-            { constructor: 1
-            , fields:                  ["v2/ecdsa-secp256k1-loop.plutus"]
-            }
+          , script: { "Right": "v2/ecdsa-secp256k1-loop.plutus" }
           , redeemer:
             { constructor: 0
             , fields:
@@ -312,10 +306,7 @@ def all_profile_variants:
    ({ generator:
       { plutus:
           { type:                       "LimitTxPerBlock_8"
-          , script:
-            { constructor: 1
-            , fields:                   ["v2/schnorr-secp256k1-loop.plutus"]
-            }
+          , script: { "Right": "v2/schnorr-secp256k1-loop.plutus" }
           , redeemer:
             { constructor: 0
             , fields:
