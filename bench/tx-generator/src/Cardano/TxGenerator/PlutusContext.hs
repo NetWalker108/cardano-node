@@ -90,7 +90,7 @@ readScriptData jsonFilePath
 -- will calibrate loop for any fully specified fitting strategy otherwise
 plutusAutoScaleBlockfit ::
      ProtocolParameters
-  -> FilePath
+  -> Either String FilePath
   -> ScriptInAnyLang
   -> PlutusAutoBudget
   -> PlutusBudgetFittingStrategy
@@ -187,7 +187,7 @@ plutusAutoBudgetMaxOut _ _ _ _ _
 
 plutusBudgetSummary ::
      ProtocolParameters
-  -> FilePath
+  -> Either String FilePath
   -> PlutusBudgetFittingStrategy
   -> (PlutusAutoBudget, Int, [PlutusAutoLimitingFactor])
   -> ExecutionUnits
@@ -198,13 +198,15 @@ plutusBudgetSummary
     { protocolParamMaxBlockExUnits  = Just budgetPerBlock
     , protocolParamMaxTxExUnits     = Just budgetPerTx
     }
-  scriptId
+  builtinOrFile
   budgetStrategy
   (PlutusAutoBudget{..}, loopCounter, loopLimitingFactors)
   budgetUsedPerTxInput
   txInputs
   = PlutusBudgetSummary{..}
   where
+    scriptId                = either ("builtin: "++) ("filepath: "++)
+                                           $ builtinOrFile
     projectedTxSize         = Nothing           -- we defer this value until after splitting phase
     strategyMessage         = Nothing
     scriptArgDatum          = autoBudgetDatum

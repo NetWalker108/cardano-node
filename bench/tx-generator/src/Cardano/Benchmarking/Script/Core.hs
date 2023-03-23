@@ -23,7 +23,6 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.ByteString.Lazy.Char8 as BSL (writeFile)
-import           Data.List (isSuffixOf)
 import           Data.Ratio ((%))
 
 import           Streaming
@@ -409,12 +408,13 @@ makePlutusContext :: forall era. IsShelleyBasedEra era
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
 makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
-  script <- if ".hs" `isSuffixOf` scriptSpecFile
-    then maybe
-          (liftTxGenError $ TxGenError $ "Plutus script not included: " ++ scriptSpecFile)
-          return
-          (findPlutusScript scriptSpecFile)
-    else liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
+  script <- case scriptSpecFile of
+    Left s -> maybe
+                (liftTxGenError . TxGenError $ "Plutus script not included: "
+                        ++ show scriptSpecFile)
+                return
+                (findPlutusScript s)
+    Right s -> liftIOSafe $ Plutus.readPlutusScript s
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -466,7 +466,7 @@ makePlutusContext ScriptSpec{..} = do
           return (unsafeHashableScriptData autoBudgetDatum, autoBudgetRedeemer, preRun)
 
   let msg = mconcat [ "Plutus Benchmark :"
-                    , " Script: ", scriptSpecFile
+                    , " Script: ", show scriptSpecFile
                     , ", Datum: ", show scriptData
                     , ", Redeemer: ", show scriptRedeemer
                     , ", StatedBudget: ", show executionUnits
