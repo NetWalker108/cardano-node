@@ -5,7 +5,16 @@ let
       plutus = if (cfg.plutus.type or null) == null then null else
         {
           inherit (cfg.plutus) type;
-          script = cfg.plutus.script; ## equivalent to inherit (cfg.plutus) script
+          ## Basically do something like:
+          ## script = "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutus.script}";
+          ## except for having to weave the Either through things
+          script = if (cfg.plutus.script?Left)
+                     then { Left = pkgs.plutus-scripts
+                                              + "/generated-plutus-scripts"
+                                              + cfg.plutus.script.Left; }
+                     else { Right = pkgs.plutus-scripts
+                                              + "/generated-plutus-scripts"
+                                              + cfg.plutus.script.Right; };
           redeemer = pkgs.writeText "plutus-redeemer.json" (__toJSON cfg.plutus.redeemer);
           datum    = if cfg.plutus.datum == null then null else
                      pkgs.writeText "plutus-datum.json"    (__toJSON cfg.plutus.datum);
