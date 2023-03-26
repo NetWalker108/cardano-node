@@ -51,6 +51,13 @@ module Cardano.Api (
     generateSigningKey,
     generateInsecureSigningKey,
 
+    -- ** Files
+    File(..),
+    HasFileMode(..),
+    FileDirection(..),
+    Directory(..),
+    fileMap,
+
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
     -- used in many other places.
@@ -750,7 +757,6 @@ module Cardano.Api (
     chainPointToSlotNo,
     chainPointToHeaderHash,
     makeChainTip,
-    parseFilePath,
     writeSecrets,
 
     -- ** Cast functions
@@ -782,6 +788,14 @@ module Cardano.Api (
 
     -- ** CLI option parsing
     bounded,
+    parseFilePath,
+    fileOption,
+    inFileOption,
+    outFileOption,
+    parseFile,
+    parseFileIn,
+    parseFileOut,
+    parseDirectory,
   ) where
 
 import           Cardano.Api.Address
@@ -800,6 +814,7 @@ import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
+import           Cardano.Api.IO
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Keys.Byron
@@ -811,6 +826,7 @@ import           Cardano.Api.LedgerState
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.OperationalCertificate
+import           Cardano.Api.Options
 import           Cardano.Api.Protocol
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query hiding (LedgerState (..))
@@ -829,3 +845,4 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
+

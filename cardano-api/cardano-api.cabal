@@ -68,6 +68,7 @@ library
                         Cardano.Api.GenesisParameters
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
+                        Cardano.Api.IO
                         Cardano.Api.IPC
                         Cardano.Api.IPC.Monad
                         Cardano.Api.InMode
@@ -83,6 +84,7 @@ library
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
                         Cardano.Api.OperationalCertificate
+                        Cardano.Api.Options
                         Cardano.Api.ProtocolParameters
                         Cardano.Api.Protocol
                         Cardano.Api.Query
