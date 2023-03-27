@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
@@ -49,9 +50,10 @@ import           Data.Word (Word64)
 
 import qualified Cardano.Chain.Slotting as Byron
 
-import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, Hash,
-                   HashableScriptData, PaymentKey, PolicyId, ScriptData, SlotNo (SlotNo), TxId,
-                   TxIn, Value, WitCtxMint, WitCtxStake, WitCtxTxIn)
+import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, File (..),
+                   FileDirection (..), HasFileMode, Hash, HashableScriptData, PaymentKey, PolicyId,
+                   ScriptData, SlotNo (SlotNo), TxId, TxIn, Value, WitCtxMint, WitCtxStake,
+                   WitCtxTxIn)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
@@ -60,7 +62,7 @@ import           Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 -- | Specify whether to render the script cost as JSON
 -- in the cli's build command.
 data TxBuildOutputOptions = OutputScriptCostOnly FilePath
-                          | OutputTxBodyOnly TxBodyFile
+                          | OutputTxBodyOnly (TxBodyFile 'Out)
                           deriving Show
 
 
@@ -75,8 +77,8 @@ data CBORObject = CBORBlockByron Byron.EpochSlots
 
 -- Encompasses stake certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
-newtype CertificateFile = CertificateFile { unCertificateFile :: FilePath }
-                          deriving newtype (Eq, Show)
+newtype CertificateFile direction = CertificateFile { unCertificateFile :: File direction }
+  deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
 newtype CurrentKesPeriod = CurrentKesPeriod { unCurrentKesPeriod :: Word64 } deriving (Eq, Show)
 
@@ -86,10 +88,10 @@ instance ToJSON CurrentKesPeriod where
 instance FromJSON CurrentKesPeriod where
   parseJSON v = CurrentKesPeriod <$> parseJSON v
 
-newtype GenesisFile = GenesisFile
-  { unGenesisFile :: FilePath }
+newtype GenesisFile direction = GenesisFile
+  { unGenesisFile :: File direction }
   deriving stock (Eq, Ord)
-  deriving newtype (IsString, Show)
+  deriving newtype (IsString, Show, HasFileMode)
 
 data OpCertNodeAndOnDiskCounterInformation
   -- | The on disk operational certificate has a counter
@@ -184,8 +186,8 @@ data OpCertIntervalInformation
       CurrentKesPeriod
   deriving (Eq, Show)
 
-instance FromJSON GenesisFile where
-  parseJSON (Aeson.String genFp) = pure . GenesisFile $ Text.unpack genFp
+instance FromJSON (GenesisFile direction) where
+  parseJSON (Aeson.String genFp) = pure . GenesisFile . File $ Text.unpack genFp
   parseJSON invalid = error $ "Parsing of GenesisFile failed due to type mismatch. "
                            <> "Encountered: " <> show invalid
 
@@ -220,17 +222,18 @@ instance Crypto.Crypto crypto =>  ToJSON (Params crypto) where
     , "retiring" .= r
     ]
 
-newtype SigningKeyFile = SigningKeyFile
-  { unSigningKeyFile :: FilePath }
+newtype SigningKeyFile direction = SigningKeyFile
+  { unSigningKeyFile :: File direction }
   deriving stock (Eq, Ord)
-  deriving newtype (IsString, Show)
+  deriving newtype (IsString, Show, HasFileMode)
 
-newtype UpdateProposalFile = UpdateProposalFile { unUpdateProposalFile :: FilePath }
-                             deriving newtype (Eq, Show)
+newtype UpdateProposalFile direction = UpdateProposalFile { unUpdateProposalFile :: File direction }
+  deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
-newtype VerificationKeyFile
-  = VerificationKeyFile { unVerificationKeyFile :: FilePath }
-  deriving (Eq, Show)
+newtype VerificationKeyFile direction
+  = VerificationKeyFile { unVerificationKeyFile :: File direction }
+  deriving (Eq, Ord)
+  deriving newtype (IsString, Show, HasFileMode)
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
@@ -340,7 +343,7 @@ data BalanceTxExecUnits = AutoBalance | ManualBalance
 
 -- | Plutus script required signers
 data RequiredSigner
- = RequiredSignerSkeyFile SigningKeyFile
+ = RequiredSignerSkeyFile (SigningKeyFile 'In)
  | RequiredSignerHash (Hash PaymentKey)
  deriving Show
 
@@ -351,13 +354,13 @@ data EpochLeadershipSchedule
   | NextEpoch
   deriving Show
 
-newtype TxBodyFile
-  = TxBodyFile FilePath
-  deriving Show
+newtype TxBodyFile direction
+  = TxBodyFile (File direction)
+  deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 
-newtype TxFile
-  = TxFile FilePath
-  deriving Show
+newtype TxFile direction
+  = TxFile (File direction)
+  deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 
 data TxMempoolQuery =
       TxMempoolQueryTxExists TxId

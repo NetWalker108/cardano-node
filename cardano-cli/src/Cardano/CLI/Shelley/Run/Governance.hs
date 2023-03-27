@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Cardano.CLI.Shelley.Run.Governance
   ( ShelleyGovernanceCmdError
   , renderShelleyGovernanceError
@@ -79,13 +81,13 @@ runGovernanceMIRCertificatePayStakeAddrs
   :: Shelley.MIRPot
   -> [StakeAddress] -- ^ Stake addresses
   -> [Lovelace]     -- ^ Corresponding reward amounts (same length)
-  -> OutputFile
+  -> File 'Out
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts (OutputFile oFp) = do
+runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts oFp = do
 
     unless (length sAddrs == length rwdAmts) $
       left $ ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach
-               oFp (length sAddrs) (length rwdAmts)
+               (unFile oFp) (length sAddrs) (length rwdAmts)
 
     let sCreds  = map stakeAddressCredential sAddrs
         mirCert = makeMIRCertificate mirPot (StakeAddressesMIR $ zip sCreds rwdAmts)
@@ -99,10 +101,10 @@ runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts (OutputFile oFp) 
 
 runGovernanceMIRCertificateTransfer
   :: Lovelace
-  -> OutputFile
+  -> File 'Out
   -> TransferDirection
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceMIRCertificateTransfer ll (OutputFile oFp) direction = do
+runGovernanceMIRCertificateTransfer ll oFp direction = do
   mirCert <- case direction of
                  TransferToReserves ->
                    return . makeMIRCertificate Shelley.TreasuryMIR $ SendToReservesMIR ll
@@ -122,12 +124,12 @@ runGovernanceGenesisKeyDelegationCertificate
   :: VerificationKeyOrHashOrFile GenesisKey
   -> VerificationKeyOrHashOrFile GenesisDelegateKey
   -> VerificationKeyOrHashOrFile VrfKey
-  -> OutputFile
+  -> File 'Out
   -> ExceptT ShelleyGovernanceCmdError IO ()
 runGovernanceGenesisKeyDelegationCertificate genVkOrHashOrFp
                                              genDelVkOrHashOrFp
                                              vrfVkOrHashOrFp
-                                             (OutputFile oFp) = do
+                                             oFp = do
     genesisVkHash <- firstExceptT ShelleyGovernanceCmdKeyReadError
       . newExceptT
       $ readVerificationKeyOrHashOrTextEnvFile AsGenesisKey genVkOrHashOrFp
@@ -146,23 +148,24 @@ runGovernanceGenesisKeyDelegationCertificate genVkOrHashOrFp
     genKeyDelegCertDesc = "Genesis Key Delegation Certificate"
 
 runGovernanceUpdateProposal
-  :: OutputFile
+  :: File 'Out
   -> EpochNo
-  -> [VerificationKeyFile]
+  -> [VerificationKeyFile 'In]
   -- ^ Genesis verification keys
   -> ProtocolParametersUpdate
-  -> Maybe FilePath -- ^ Cost models file path
+  -> Maybe (File 'In) -- ^ Cost models file path
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCostModelFp = do
+runGovernanceUpdateProposal upFile eNo genVerKeyFiles upPprams mCostModelFp = do
   finalUpPprams <- case mCostModelFp of
     Nothing -> return upPprams
     Just fp -> do
-      costModelsBs <- handleIOExceptT (ShelleyGovernanceCmdCostModelReadError . FileIOError fp) $ LB.readFile fp
+      costModelsBs <- LB.readFile (unFile fp)
+        & handleIOExceptT (ShelleyGovernanceCmdCostModelReadError . FileIOError (unFile fp))
 
       cModels <- pure (eitherDecode costModelsBs)
-        & onLeft (left . ShelleyGovernanceCmdCostModelsJsonDecodeErr fp . Text.pack)
+        & onLeft (left . ShelleyGovernanceCmdCostModelsJsonDecodeErr (unFile fp) . Text.pack)
 
-      when (List.null (unCostModels cModels)) $ left (ShelleyGovernanceCmdEmptyCostModel fp)
+      when (List.null (unCostModels cModels)) $ left (ShelleyGovernanceCmdEmptyCostModel (unFile fp))
 
       return $ upPprams {protocolUpdateCostModels = fromAlonzoCostModels cModels}
 

@@ -130,6 +130,7 @@ import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.InMode
+import           Cardano.Api.IO (File (..), FileDirection (..))
 import           Cardano.Api.IPC.Version
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
@@ -186,7 +187,7 @@ data LocalNodeConnectInfo mode =
      LocalNodeConnectInfo {
        localConsensusModeParams :: ConsensusModeParams mode,
        localNodeNetworkId       :: NetworkId,
-       localNodeSocketPath      :: FilePath
+       localNodeSocketPath      :: File 'InOut
      }
 
 localConsensusMode :: LocalNodeConnectInfo mode -> ConsensusMode mode
@@ -233,7 +234,7 @@ connectToLocalNodeWithVersion LocalNodeConnectInfo {
           Net.nctHandshakeTracer = nullTracer
         }
         versionedProtocls
-        localNodeSocketPath
+        (unFile localNodeSocketPath)
   where
     versionedProtocls =
       -- First convert from the mode-parametrised view of things to the

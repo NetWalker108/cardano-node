@@ -65,6 +65,7 @@ library
                         Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees
+                        Cardano.Api.IO
                         Cardano.Api.GenesisParameters
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy

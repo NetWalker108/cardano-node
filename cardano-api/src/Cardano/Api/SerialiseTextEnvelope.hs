@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -60,6 +61,7 @@ import           Cardano.Binary (DecoderError)
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.IO (File (..), FileDirection (..))
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.Utils (readFileBlocking)
 
@@ -227,7 +229,7 @@ deserialiseFromTextEnvelopeAnyOf types te =
     matching (FromSomeType ttoken _f) = actualType == textEnvelopeType ttoken
 
 writeFileWithOwnerPermissions
-  :: FilePath
+  :: File 'Out
   -> LBS.ByteString
   -> IO (Either (FileError ()) ())
 #ifdef UNIX
@@ -241,17 +243,17 @@ writeFileWithOwnerPermissions path a = do
       -- it will be immediately turned into a Handle (which will be closed when
       -- the Handle is closed)
       bracketOnError
-        (openFd path WriteOnly (Just ownerModes) defaultFileFlags)
+        (openFd (unFile path) WriteOnly (Just ownerModes) defaultFileFlags)
         closeFd
         (\fd -> setFdOwnerAndGroup fd user (-1) >> pure fd)
     case ownedFile of
       Left (err :: IOException) -> do
-        pure $ Left $ FileIOError path err
+        pure $ Left $ FileIOError (unFile path) err
       Right fd -> do
         bracket
           (fdToHandle fd)
           hClose
-          (\handle -> runExceptT $ handleIOExceptT (FileIOError path) $ LBS.hPut handle a)
+          (\handle -> runExceptT $ handleIOExceptT (FileIOError (unFile path)) $ LBS.hPut handle a)
 #else
 -- On something other than unix, we make a _new_ file, and since we created it,
 -- we must own it. We then place it at the target location. Unfortunately this
@@ -261,31 +263,31 @@ writeFileWithOwnerPermissions targetPath a =
       (openTempFile targetDir $ targetFile <.> "tmp")
       (\(tmpPath, fHandle) -> do
         hClose fHandle >> removeFile tmpPath
-        return . Left $ FileErrorTempFile targetPath tmpPath fHandle)
+        return . Left $ FileErrorTempFile (unFile targetPath) tmpPath fHandle)
       (\(tmpPath, fHandle) -> do
           LBS.hPut fHandle a
           hClose fHandle
-          renameFile tmpPath targetPath
+          renameFile tmpPath (unFile targetPath)
           return $ Right ())
   where
-    (targetDir, targetFile) = splitFileName targetPath
+    (targetDir, targetFile) = splitFileName (unFile targetPath)
 #endif
 
 writeFileTextEnvelope :: HasTextEnvelope a
-                      => FilePath
+                      => File 'Out
                       -> Maybe TextEnvelopeDescr
                       -> a
                       -> IO (Either (FileError ()) ())
 writeFileTextEnvelope path mbDescr a =
     runExceptT $ do
-      handleIOExceptT (FileIOError path) $ LBS.writeFile path content
+      handleIOExceptT (FileIOError (unFile path)) $ LBS.writeFile (unFile path) content
   where
     content = textEnvelopeToJSON mbDescr a
 
 
 writeFileTextEnvelopeWithOwnerPermissions
   :: HasTextEnvelope a
-  => FilePath
+  => File 'Out
   -> Maybe TextEnvelopeDescr
   -> a
   -> IO (Either (FileError ()) ())
@@ -301,45 +303,44 @@ textEnvelopeToJSON mbDescr a  =
 
 readFileTextEnvelope :: HasTextEnvelope a
                      => AsType a
-                     -> FilePath
+                     -> File 'In
                      -> IO (Either (FileError TextEnvelopeError) a)
 readFileTextEnvelope ttoken path =
     runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ readFileBlocking path
-      firstExceptT (FileError path) $ hoistEither $ do
+      content <- handleIOExceptT (FileIOError (unFile path)) $ readFileBlocking path
+      firstExceptT (FileError (unFile path)) $ hoistEither $ do
         te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
         deserialiseFromTextEnvelope ttoken te
 
 
 readFileTextEnvelopeAnyOf :: [FromSomeType HasTextEnvelope b]
-                          -> FilePath
+                          -> File 'In
                           -> IO (Either (FileError TextEnvelopeError) b)
 readFileTextEnvelopeAnyOf types path =
     runExceptT $ do
-      content <- handleIOExceptT (FileIOError path) $ readFileBlocking path
-      firstExceptT (FileError path) $ hoistEither $ do
+      content <- handleIOExceptT (FileIOError (unFile path)) $ readFileBlocking path
+      firstExceptT (FileError (unFile path)) $ hoistEither $ do
         te <- first TextEnvelopeAesonDecodeError $ Aeson.eitherDecodeStrict' content
         deserialiseFromTextEnvelopeAnyOf types te
 
 
-readTextEnvelopeFromFile :: FilePath
-                         -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
+readTextEnvelopeFromFile :: File 'In -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
 readTextEnvelopeFromFile path =
   runExceptT $ do
-    bs <- handleIOExceptT (FileIOError path) $
+    bs <- handleIOExceptT (FileIOError (unFile path)) $
             readFileBlocking path
-    firstExceptT (FileError path . TextEnvelopeAesonDecodeError)
+    firstExceptT (FileError (unFile path) . TextEnvelopeAesonDecodeError)
       . hoistEither $ Aeson.eitherDecodeStrict' bs
 
 
 readTextEnvelopeOfTypeFromFile
   :: TextEnvelopeType
-  -> FilePath
+  -> File 'In
   -> IO (Either (FileError TextEnvelopeError) TextEnvelope)
 readTextEnvelopeOfTypeFromFile expectedType path =
   runExceptT $ do
     te <- ExceptT (readTextEnvelopeFromFile path)
-    firstExceptT (FileError path) $ hoistEither $
+    firstExceptT (FileError (unFile path)) $ hoistEither $
       expectTextEnvelopeOfType expectedType te
     return te
 

@@ -1,11 +1,12 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+
 module Cardano.CLI.Shelley.Run.Address.Info
   ( runAddressInfo
   , ShelleyAddressInfoError(..)
   ) where
 
 import           Cardano.Api
-import           Cardano.CLI.Shelley.Parsers (OutputFile (..))
 
 import           Control.Monad.IO.Class (MonadIO (..))
 import           Control.Monad.Trans.Except (ExceptT)
@@ -41,7 +42,7 @@ instance ToJSON AddressInfo where
       , "base16" .= aiBase16 addrInfo
       ]
 
-runAddressInfo :: Text -> Maybe OutputFile -> ExceptT ShelleyAddressInfoError IO ()
+runAddressInfo :: Text -> Maybe (File 'Out) -> ExceptT ShelleyAddressInfoError IO ()
 runAddressInfo addrTxt mOutputFp = do
     addrInfo <- case (Left  <$> deserialiseAddress AsAddressAny addrTxt)
                  <|> (Right <$> deserialiseAddress AsStakeAddress addrTxt) of
@@ -77,6 +78,6 @@ runAddressInfo addrTxt mOutputFp = do
           }
 
     case mOutputFp of
-      Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath $ encodePretty addrInfo
+      Just fpath -> liftIO $ LBS.writeFile (unFile fpath) $ encodePretty addrInfo
       Nothing -> liftIO $ LBS.putStrLn $ encodePretty addrInfo
 

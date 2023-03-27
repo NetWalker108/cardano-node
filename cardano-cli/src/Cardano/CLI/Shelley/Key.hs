@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -46,7 +47,7 @@ import           Cardano.CLI.Types
 data VerificationKeyOrFile keyrole
   = VerificationKeyValue !(VerificationKey keyrole)
   -- ^ A verification key.
-  | VerificationKeyFilePath !VerificationKeyFile
+  | VerificationKeyFilePath !(VerificationKeyFile 'In)
   -- ^ A path to a verification key file.
   -- Note that this file hasn't been validated at all (whether it exists,
   -- contains a key of the correct type, etc.)
@@ -109,7 +110,7 @@ data StakeVerifier
 -- to a verification key file.
 data VerificationKeyTextOrFile
   = VktofVerificationKeyText !Text
-  | VktofVerificationKeyFile !VerificationKeyFile
+  | VktofVerificationKeyFile !(VerificationKeyFile 'In)
   deriving (Eq, Show)
 
 -- | An error in deserialising a 'VerificationKeyTextOrFile' to a
@@ -138,7 +139,7 @@ readVerificationKeyTextOrFileAnyOf verKeyTextOrFile =
       pure $ first VerificationKeyTextError $
         deserialiseAnyVerificationKey (Text.encodeUtf8 vkText)
     VktofVerificationKeyFile (VerificationKeyFile fp) -> do
-      vkBs <- liftIO $ BS.readFile fp
+      vkBs <- liftIO $ BS.readFile (unFile fp)
       pure $ first VerificationKeyTextError $
         deserialiseAnyVerificationKey vkBs
 

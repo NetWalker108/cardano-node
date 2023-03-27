@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -26,7 +27,7 @@ import           Cardano.CLI.Shelley.Key (PaymentVerifier (..), StakeVerifier (.
                    VerificationKeyTextOrFile, VerificationKeyTextOrFileError (..), generateKeyPair,
                    readVerificationKeyOrFile, readVerificationKeyTextOrFileAnyOf,
                    renderVerificationKeyTextOrFileError)
-import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
+import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
 import           Cardano.CLI.Shelley.Run.Read
 import           Cardano.CLI.Types
@@ -65,8 +66,8 @@ runAddressCmd cmd =
 
 runAddressKeyGenToFile
   :: AddressKeyType
-  -> VerificationKeyFile
-  -> SigningKeyFile
+  -> VerificationKeyFile 'Out
+  -> SigningKeyFile 'Out
   -> ExceptT ShelleyAddressCmdError IO ()
 runAddressKeyGenToFile kt vkf skf = case kt of
   AddressKeyShelley         -> generateAndWriteKeyFiles AsPaymentKey          vkf skf
@@ -76,16 +77,16 @@ runAddressKeyGenToFile kt vkf skf = case kt of
 generateAndWriteKeyFiles
   :: Key keyrole
   => AsType keyrole
-  -> VerificationKeyFile
-  -> SigningKeyFile
+  -> VerificationKeyFile 'Out
+  -> SigningKeyFile 'Out
   -> ExceptT ShelleyAddressCmdError IO ()
 generateAndWriteKeyFiles asType vkf skf = do
   uncurry (writePaymentKeyFiles vkf skf) =<< liftIO (generateKeyPair asType)
 
 writePaymentKeyFiles
   :: Key keyrole
-  => VerificationKeyFile
-  -> SigningKeyFile
+  => VerificationKeyFile 'Out
+  -> SigningKeyFile 'Out
   -> VerificationKey keyrole
   -> SigningKey keyrole
   -> ExceptT ShelleyAddressCmdError IO ()
@@ -99,7 +100,7 @@ writePaymentKeyFiles (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) vk
     vkeyDesc = "Payment Verification Key"
 
 runAddressKeyHash :: VerificationKeyTextOrFile
-                  -> Maybe OutputFile
+                  -> Maybe (File 'Out)
                   -> ExceptT ShelleyAddressCmdError IO ()
 runAddressKeyHash vkeyTextOrFile mOutputFp = do
   vkey <- firstExceptT ShelleyAddressCmdVerificationKeyTextOrFileError $
@@ -109,14 +110,14 @@ runAddressKeyHash vkeyTextOrFile mOutputFp = do
                      (serialiseToRawBytesHex . verificationKeyHash) vkey
 
   case mOutputFp of
-    Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath hexKeyHash
+    Just fpath -> liftIO $ BS.writeFile (unFile fpath) hexKeyHash
     Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
 
 runAddressBuild :: PaymentVerifier
                 -> Maybe StakeVerifier
                 -> NetworkId
-                -> Maybe OutputFile
+                -> Maybe (File 'Out)
                 -> ExceptT ShelleyAddressCmdError IO ()
 runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
   outText <- case paymentVerifier of
@@ -152,8 +153,8 @@ runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
       return $ serialiseAddress . makeShelleyAddress nw payCred $ stakeAddressReference
 
   case mOutFp of
-    Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath outText
-    Nothing                 -> liftIO $ Text.putStr          outText
+    Just fpath -> liftIO $ Text.writeFile (unFile fpath) outText
+    Nothing -> liftIO $ Text.putStr outText
 
 makeStakeAddressRef
   :: StakeVerifier
