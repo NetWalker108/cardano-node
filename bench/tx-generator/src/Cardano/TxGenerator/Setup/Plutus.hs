@@ -11,7 +11,6 @@ module Cardano.TxGenerator.Setup.Plutus
        where
 
 import           Data.Bifunctor (bimap)
-import           Data.List(isSuffixOf)
 import           Data.Map.Strict as Map (lookup, toAscList)
 
 import           Control.Monad.Trans.Except
@@ -35,13 +34,12 @@ import           Cardano.TxGenerator.Types
 type ProtocolVersion = (Int, Int)
 
 
-readPlutusScript :: FilePath -> IO (Either TxGenError ScriptInAnyLang)
-readPlutusScript fp
-  | ".hs" `isSuffixOf` fp
+readPlutusScript :: Either String FilePath -> IO (Either TxGenError ScriptInAnyLang)
+readPlutusScript (Left s)
   = return
-  $ maybe (Left . TxGenError $ "readPlutusScript: " ++ fp ++ " not found.")
-            Right (findPlutusScript fp)
-  | otherwise
+  $ maybe (Left . TxGenError $ "readPlutusScript: " ++ s ++ " not found.")
+            Right (findPlutusScript s)
+readPlutusScript (Right fp)
   = runExceptT $ do
     script <- firstExceptT ApiError $
       readFileScriptInAnyLang fp

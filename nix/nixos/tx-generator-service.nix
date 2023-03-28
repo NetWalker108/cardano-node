@@ -9,11 +9,10 @@ let
           ## script = "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutus.script}";
           ## except for having to weave the Either through things
           script = if (cfg.plutus.script?Left)
-                     then { Left = pkgs.plutus-scripts
-                                              + "/generated-plutus-scripts"
-                                              + cfg.plutus.script.Left; }
+                     ## The internal ID doesn't need path qualification.
+                     then { Left = cfg.plutus.script.Left; }
                      else { Right = pkgs.plutus-scripts
-                                              + "/generated-plutus-scripts"
+                                              + "/generated-plutus-scripts/"
                                               + cfg.plutus.script.Right; };
           redeemer = pkgs.writeText "plutus-redeemer.json" (__toJSON cfg.plutus.redeemer);
           datum    = if cfg.plutus.datum == null then null else

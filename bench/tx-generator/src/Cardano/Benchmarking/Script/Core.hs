@@ -54,7 +54,6 @@ import           Cardano.TxGenerator.Setup.SigningKey
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
-import           Cardano.Benchmarking.PlutusScripts (findPlutusScript)
 
 import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
                    btSubmission2_, btTxSubmit_)
@@ -408,13 +407,7 @@ makePlutusContext :: forall era. IsShelleyBasedEra era
   -> ActionM (Witness WitCtxTxIn era, ScriptInAnyLang, ScriptData, Lovelace)
 makePlutusContext ScriptSpec{..} = do
   protocolParameters <- getProtocolParameters
-  script <- case scriptSpecFile of
-    Left s -> maybe
-                (liftTxGenError . TxGenError $ "Plutus script not included: "
-                        ++ show scriptSpecFile)
-                return
-                (findPlutusScript s)
-    Right s -> liftIOSafe $ Plutus.readPlutusScript s
+  script <- liftIOSafe $ Plutus.readPlutusScript scriptSpecFile
 
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
@@ -458,7 +451,7 @@ makePlutusContext ScriptSpec{..} = do
       traceDebug $ "Plutus auto mode : Available budget per Tx: " ++ show perTxBudget
                    ++ " -- split between inputs per Tx: " ++ show txInputs
 
-      case plutusAutoScaleBlockfit protocolParameters scriptSpecFile script autoBudget strategy txInputs of
+      case plutusAutoScaleBlockfit protocolParameters (either ("builtin: "++) ("plutus file: "++) scriptSpecFile) script autoBudget strategy txInputs of
         Left err -> liftTxGenError err
         Right (summary, PlutusAutoBudget{..}, preRun) -> do
           setEnvSummary summary
