@@ -236,7 +236,8 @@ checkPlutusLoop ::
 checkPlutusLoop (Just PlutusOn{..})
   = do
     script <- either (die . show) pure =<< readPlutusScript plutusScript
-    putStrLn $ "--> Read plutus script: " ++ plutusScript
+    putStrLn $ "--> Read plutus script: "
+                 ++ (either ("Left: "++) ("Right: "++) plutusScript)
     protocolParameters <- readProtocolParametersOrDie
 
     let count = 1_792        -- arbitrary counter for a loop script; should respect mainnet limits
@@ -286,9 +287,11 @@ checkPlutusLoop (Just PlutusOn{..})
     mul :: Natural -> Double -> Natural
     mul n d = floor $ d * fromIntegral n
 
-    getRedeemerFile =
-      let redeemerPath = (<.> ".redeemer.json") $ dropExtension $ takeFileName plutusScript
-      in getDataFileName $ "data" </> redeemerPath
+    getRedeemerFile
+      = case plutusScript of
+          Right file -> let redeemerPath = (<.> ".redeemer.json") $ dropExtension $ takeFileName file
+                        in getDataFileName $ "data" </> redeemerPath
+          Left _ -> getDataFileName "data/loop.redeemer.json"
 checkPlutusLoop _
   = putStrLn "--> No plutus script defined."
 
