@@ -7,6 +7,11 @@
 , eventlogged ? true
 # The exec driver uses SRE's plugin that allows Nix derivation artifacts!
 , execTaskDriver
+# The podman (non exec) task driver can only run in a local environment because
+# it mounts the local genesis and mainnet mirror folders, it's the simplest
+# Nomad testing environment and doesn't need root privileges or Amazon S3 to
+# run!
+, nonLocalRun
 , ...
 }:
 let
@@ -79,13 +84,12 @@ let
       else [ nomad-sre ]
     )
     ++
-    [
+    (if nonLocalRun
+      then [ pkgs.awscli ] # Amazon S3 HTTP to upload the genesis.
       # Network tools to be able to use bridge networking and the HTTP server
       # to upload/download the genesis tar file.
-      pkgs.cni-plugins pkgs.webfs
-      # Amazon S3 HTTP to upload the genesis.
-      pkgs.awscli
-    ]
+      else [ pkgs.cni-plugins pkgs.webfs ]
+    )
   ;
 
   # Backend-specific Nix bits:
