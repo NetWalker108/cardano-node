@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -61,18 +62,17 @@ data ConfigError =
 -- | Filepath of the configuration yaml file. This file determines
 -- all the configuration settings required for the cardano node
 -- (logging, tracing, protocol, slot length etc)
-newtype ConfigYamlFilePath direction = ConfigYamlFilePath
-  { unConfigPath :: File direction }
-  deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+newtype ConfigYamlFilePath (direction :: FileDirection) = ConfigYamlFilePath
+  { unConfigYamlFilePath :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
-newtype DbFile direction = DbFile
-  { unDB :: File direction }
-  deriving newtype (Eq, Show, HasFileMode)
+newtype DbFile (direction :: FileDirection) = DbFile
+  { unDbFile :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
 newtype GenesisFile = GenesisFile
-  { unGenesisFile :: FilePath }
-  deriving stock (Eq, Ord)
-  deriving newtype (IsString, Show)
+  { unGenesisFile :: FilePath
+  } deriving newtype (Eq, Ord, IsString, Show)
 
 instance FromJSON GenesisFile where
   parseJSON (String genFp) = pure . GenesisFile $ Text.unpack genFp
@@ -287,9 +287,9 @@ data NodeHardForkProtocolConfiguration =
      }
   deriving (Eq, Show)
 
-newtype TopologyFile direction = TopologyFile
-  { unTopology :: File direction }
-  deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+newtype TopologyFile (direction :: FileDirection) = TopologyFile
+  { unTopologyFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 
 instance AdjustFilePaths NodeProtocolConfiguration where
 

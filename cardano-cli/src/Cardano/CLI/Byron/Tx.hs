@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.CLI.Byron.Tx
@@ -77,9 +78,9 @@ renderByronTxError err =
       "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
 
-newtype NewTxFile direction =
-  NewTxFile (File direction)
-  deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+newtype NewTxFile (direction :: FileDirection) = NewTxFile
+  { unNewTxFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 
 
 -- | Pretty-print an address in its Base58 form, and also

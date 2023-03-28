@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
@@ -77,8 +78,9 @@ data CBORObject = CBORBlockByron Byron.EpochSlots
 
 -- Encompasses stake certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
-newtype CertificateFile direction = CertificateFile { unCertificateFile :: File direction }
-  deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+newtype CertificateFile (direction :: FileDirection) = CertificateFile
+  { unCertificateFile :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
 newtype CurrentKesPeriod = CurrentKesPeriod { unCurrentKesPeriod :: Word64 } deriving (Eq, Show)
 
@@ -88,10 +90,9 @@ instance ToJSON CurrentKesPeriod where
 instance FromJSON CurrentKesPeriod where
   parseJSON v = CurrentKesPeriod <$> parseJSON v
 
-newtype GenesisFile direction = GenesisFile
-  { unGenesisFile :: File direction }
-  deriving stock (Eq, Ord)
-  deriving newtype (IsString, Show, HasFileMode)
+newtype GenesisFile (direction :: FileDirection) = GenesisFile
+  { unGenesisFile :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
 data OpCertNodeAndOnDiskCounterInformation
   -- | The on disk operational certificate has a counter
@@ -222,18 +223,17 @@ instance Crypto.Crypto crypto =>  ToJSON (Params crypto) where
     , "retiring" .= r
     ]
 
-newtype SigningKeyFile direction = SigningKeyFile
-  { unSigningKeyFile :: File direction }
-  deriving stock (Eq, Ord)
-  deriving newtype (IsString, Show, HasFileMode)
+newtype SigningKeyFile (direction :: FileDirection) = SigningKeyFile
+  { unSigningKeyFile :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
-newtype UpdateProposalFile direction = UpdateProposalFile { unUpdateProposalFile :: File direction }
-  deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+newtype UpdateProposalFile (direction :: FileDirection) = UpdateProposalFile
+  { unUpdateProposalFile :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
-newtype VerificationKeyFile direction
-  = VerificationKeyFile { unVerificationKeyFile :: File direction }
-  deriving (Eq, Ord)
-  deriving newtype (IsString, Show, HasFileMode)
+newtype VerificationKeyFile (direction :: FileDirection) = VerificationKeyFile
+  { unVerificationKeyFile :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
@@ -354,13 +354,13 @@ data EpochLeadershipSchedule
   | NextEpoch
   deriving Show
 
-newtype TxBodyFile direction
-  = TxBodyFile (File direction)
-  deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+newtype TxBodyFile (direction :: FileDirection) = TxBodyFile
+  { unTxBodyFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 
-newtype TxFile direction
-  = TxFile (File direction)
-  deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+newtype TxFile (direction :: FileDirection) = TxFile
+  { txFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 
 data TxMempoolQuery =
       TxMempoolQueryTxExists TxId

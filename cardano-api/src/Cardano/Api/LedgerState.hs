@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -765,7 +766,7 @@ readNetworkConfig (NetworkConfigFile ncf) = do
       , ncConwayGenesisFile = adjustGenesisFilePath (fileMap (mkAdjustPath ncf)) (ncConwayGenesisFile ncfg)
       }
 
-data NodeConfig direction = NodeConfig
+data NodeConfig (direction :: FileDirection) = NodeConfig
   { ncPBftSignatureThreshold :: !(Maybe Double)
   , ncByronGenesisFile :: !(GenesisFile direction)
   , ncByronGenesisHash :: !GenesisHashByron
@@ -888,7 +889,7 @@ parseNodeConfig bs =
 adjustGenesisFilePath :: (File direction -> File direction) -> GenesisFile direction -> GenesisFile direction
 adjustGenesisFilePath f (GenesisFile p) = GenesisFile (f p)
 
-mkAdjustPath :: File direction -> (FilePath -> FilePath)
+mkAdjustPath :: File (direction :: FileDirection) -> (FilePath -> FilePath)
 mkAdjustPath (File nodeConfigFilePath) fp = takeDirectory nodeConfigFilePath </> fp
 
 readByteString :: File 'In -> Text -> ExceptT Text IO ByteString
@@ -970,9 +971,9 @@ data ShelleyConfig = ShelleyConfig
   , scGenesisHash :: !GenesisHashShelley
   }
 
-newtype GenesisFile direction = GenesisFile
+newtype GenesisFile (direction :: FileDirection) = GenesisFile
   { unGenesisFile :: File direction
-  } deriving (Eq, Ord, Show, HasFileMode)
+  } deriving (Eq, Ord, Show, IsString, HasFileMode)
 
 newtype GenesisHashByron = GenesisHashByron
   { unGenesisHashByron :: Text
@@ -998,7 +999,7 @@ newtype NetworkName = NetworkName
   { unNetworkName :: Text
   } deriving Show
 
-newtype NetworkConfigFile direction = NetworkConfigFile
+newtype NetworkConfigFile (direction :: FileDirection) = NetworkConfigFile
   { _unNetworkConfigFile :: File direction
   } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 

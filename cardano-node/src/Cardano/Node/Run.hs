@@ -202,7 +202,7 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
   case ncEnableP2P nc of
     SomeNetworkP2PMode p2pMode -> do
       let fp = maybe  "No file path found!"
-                      unConfigPath
+                      unConfigYamlFilePath
                       (getLast (pncConfigFile cmdPc))
       case ncTraceConfig nc of
         TraceDispatcher{} -> do

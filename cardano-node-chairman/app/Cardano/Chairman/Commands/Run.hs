@@ -109,7 +109,7 @@ run RunOpts
   ptclConfig <- case getProtocolConfiguration configYamlPc of
                   Nothing ->
                     error $ "Node protocol configuration was not specified "<>
-                            "in Config yaml filepath: " <> unFile (unConfigPath caConfigYaml)
+                            "in Config yaml filepath: " <> unFile (unConfigYamlFilePath caConfigYaml)
                   Just ptclConfig -> return ptclConfig
 
   eitherSomeProtocol <- runExceptT $ mkConsensusProtocol ptclConfig Nothing

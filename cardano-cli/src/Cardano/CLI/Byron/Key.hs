@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 
 module Cardano.CLI.Byron.Key
   ( -- * Keys
@@ -60,13 +61,13 @@ renderByronKeyFailure err =
     VerificationKeyDeserialisationFailed vKeyFp deSerError ->
       "Error deserialising verification key at: " <> textShow vKeyFp <> " Error: " <> textShow deSerError
 
-newtype NewSigningKeyFile direction =
-  NewSigningKeyFile (File direction)
-  deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+newtype NewSigningKeyFile (direction :: FileDirection) = NewSigningKeyFile
+  { unNewSigningKeyFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 
-newtype NewVerificationKeyFile direction =
-  NewVerificationKeyFile (File direction)
-   deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+newtype NewVerificationKeyFile (direction :: FileDirection) = NewVerificationKeyFile
+  { unNewVerificationKeyFile :: File direction
+  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
 
 -- | Print some invariant properties of a public key:
 --   its hash and formatted view.

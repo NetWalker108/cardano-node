@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Shelley CLI command types
@@ -544,10 +545,10 @@ newtype GenesisDir
 -- | Either a verification or signing key, used for conversions and other
 -- commands that make sense for both.
 --
-data SomeKeyFile direction
+data SomeKeyFile (direction :: FileDirection)
   = AVerificationKeyFile (VerificationKeyFile direction)
   | ASigningKeyFile (SigningKeyFile direction)
-  deriving Show
+  deriving (Eq, Show)
 
 data AddressKeyType
   = AddressKeyShelley
@@ -573,17 +574,17 @@ data CardanoAddressKeyType
   | CardanoAddressByronPaymentKey
   deriving Show
 
-newtype OpCertCounterFile direction
-  = OpCertCounterFile (File direction)
-  deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+newtype OpCertCounterFile (direction :: FileDirection) = OpCertCounterFile
+  { unOpCertCounterFile :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
 newtype PrivKeyFile
   = PrivKeyFile FilePath
   deriving Show
 
-newtype WitnessFile direction
-  = WitnessFile (File direction)
-  deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+newtype WitnessFile (direction :: FileDirection) = WitnessFile
+  { unWitnessFile :: File direction
+  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
 
 -- | A raw verification key given in Base64, and decoded into a ByteString.
 newtype VerificationKeyBase64
