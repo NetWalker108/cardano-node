@@ -186,7 +186,7 @@ runNodeIssueOpCert kesVerKeyOrFile
 
     ocertIssueCounter <- firstExceptT ShelleyNodeCmdReadFileError
       . newExceptT
-      $ readFileTextEnvelope AsOperationalCertificateIssueCounter (usingIn ocertCtrPath)
+      $ readFileTextEnvelope AsOperationalCertificateIssueCounter (toFileIn ocertCtrPath)
 
     verKeyKes <- firstExceptT ShelleyNodeCmdReadKeyFileError
       . newExceptT
@@ -213,7 +213,7 @@ runNodeIssueOpCert kesVerKeyOrFile
     firstExceptT ShelleyNodeCmdWriteFileError
       . newExceptT
       $ writeFileTextEnvelope
-        (usingOut ocertCtrPath)
+        (toFileOut ocertCtrPath)
         (Just $ ocertCtrDesc $ getCounter nextOcertCtr)
         nextOcertCtr
 

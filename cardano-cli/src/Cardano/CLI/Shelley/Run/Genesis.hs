@@ -818,18 +818,18 @@ createDelegateKeys dir index = do
   liftIO $ createDirectoryIfMissing False dir
   runGenesisKeyGenDelegate
         (VerificationKeyFile $ File $ dir </> "delegate" ++ strIndex ++ ".vkey")
-        (usingOut coldSK)
-        (usingOut opCertCtr)
+        (toSigningKeyFileOut coldSK)
+        (toOpCertCounterFileOut opCertCtr)
   runGenesisKeyGenDelegateVRF
         (VerificationKeyFile $ File $ dir </> "delegate" ++ strIndex ++ ".vrf.vkey")
         (SigningKeyFile $ File $ dir </> "delegate" ++ strIndex ++ ".vrf.skey")
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
-        (usingOut kesVK)
+        (toVerificationKeyFileOut kesVK)
         (SigningKeyFile $ File $ dir </> "delegate" ++ strIndex ++ ".kes.skey")
     runNodeIssueOpCert
-        (VerificationKeyFilePath (usingIn kesVK))
-        (usingIn coldSK)
+        (VerificationKeyFilePath (toVerificationKeyFileIn kesVK))
+        (toSigningKeyFileIn coldSK)
         opCertCtr
         (KESPeriod 0)
         (File $ dir </> "opcert" ++ strIndex ++ ".cert")
@@ -861,18 +861,18 @@ createPoolCredentials dir index = do
   liftIO $ createDirectoryIfMissing False dir
   firstExceptT ShelleyGenesisCmdNodeCmdError $ do
     runNodeKeyGenKES
-        (usingOut kesVK)
+        (toVerificationKeyFileOut kesVK)
         (SigningKeyFile $ File $ dir </> "kes" ++ strIndex ++ ".skey")
     runNodeKeyGenVRF
         (VerificationKeyFile $ File $ dir </> "vrf" ++ strIndex ++ ".vkey")
         (SigningKeyFile $ File $ dir </> "vrf" ++ strIndex ++ ".skey")
     runNodeKeyGenCold
         (VerificationKeyFile $ File $ dir </> "cold" ++ strIndex ++ ".vkey")
-        (usingOut coldSK)
-        (usingOut opCertCtr)
+        (toSigningKeyFileOut coldSK)
+        (toOpCertCounterFileOut opCertCtr)
     runNodeIssueOpCert
-        (VerificationKeyFilePath (usingIn kesVK))
-        (usingIn coldSK)
+        (VerificationKeyFilePath (toVerificationKeyFileIn kesVK))
+        (toSigningKeyFileIn coldSK)
         opCertCtr
         (KESPeriod 0)
         (File $ dir </> "opcert" ++ strIndex ++ ".cert")
@@ -996,7 +996,7 @@ readShelleyGenesisWithDefault
   -> (ShelleyGenesis StandardShelley -> ShelleyGenesis StandardShelley)
   -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis StandardShelley)
 readShelleyGenesisWithDefault fpath adjustDefaults = do
-    newExceptT (readAndDecodeShelleyGenesis (usingIn fpath))
+    newExceptT (readAndDecodeShelleyGenesis (toFileIn fpath))
       `catchError` \err ->
         case err of
           ShelleyGenesisCmdGenesisFileReadError (FileIOError _ ioe)

@@ -53,7 +53,8 @@ module Cardano.Api (
 
     -- ** Files
     File(..),
-    HasFileMode(..),
+    toFileIn,
+    toFileOut,
     FileDirection(..),
     Directory(..),
     fileMap,
@@ -796,6 +797,13 @@ module Cardano.Api (
     parseFileIn,
     parseFileOut,
     parseDirectory,
+
+    toGenesisFileIn,
+    toGenesisFileOut,
+    toNetworkConfigFileIn,
+    toNetworkConfigFileOut,
+    toNodeConfigIn,
+    toNodeConfigOut,
   ) where
 
 import           Cardano.Api.Address

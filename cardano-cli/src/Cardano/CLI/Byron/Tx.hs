@@ -22,6 +22,9 @@ module Cardano.CLI.Byron.Tx
   , toCborTxAux
 
   , ScriptValidity(..)
+
+  , toNewTxFileIn
+  , toNewTxFileOut
   )
 where
 
@@ -32,6 +35,7 @@ import           Data.Bifunctor (Bifunctor (..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
+import           Data.Coerce (coerce)
 import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -80,7 +84,13 @@ renderByronTxError err =
 
 newtype NewTxFile (direction :: FileDirection) = NewTxFile
   { unNewTxFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+  } deriving newtype (Eq, Ord, Show, IsString)
+
+toNewTxFileIn :: NewTxFile 'InOut -> NewTxFile 'In
+toNewTxFileIn = coerce
+
+toNewTxFileOut :: NewTxFile 'InOut -> NewTxFile 'Out
+toNewTxFileOut = coerce
 
 
 -- | Pretty-print an address in its Base58 form, and also

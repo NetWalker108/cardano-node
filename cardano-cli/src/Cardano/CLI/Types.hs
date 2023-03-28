@@ -41,10 +41,26 @@ module Cardano.CLI.Types
   , Params (..)
   , RequiredSigner (..)
   , AllOrOnly(..)
+
+  , toCertificateFileIn
+  , toCertificateFileOut
+  , toGenesisFileIn
+  , toGenesisFileOut
+  , toSigningKeyFileIn
+  , toSigningKeyFileOut
+  , toTxBodyFileIn
+  , toTxBodyFileOut
+  , toTxFileIn
+  , toTxFileOut
+  , toUpdateProposalFileIn
+  , toUpdateProposalFileOut
+  , toVerificationKeyFileIn
+  , toVerificationKeyFileOut
   ) where
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
+import           Data.Coerce (coerce)
 import           Data.String (IsString)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
@@ -52,9 +68,8 @@ import           Data.Word (Word64)
 import qualified Cardano.Chain.Slotting as Byron
 
 import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, File (..),
-                   FileDirection (..), HasFileMode, Hash, HashableScriptData, PaymentKey, PolicyId,
-                   ScriptData, SlotNo (SlotNo), TxId, TxIn, Value, WitCtxMint, WitCtxStake,
-                   WitCtxTxIn)
+                   FileDirection (..), Hash, HashableScriptData, PaymentKey, PolicyId, ScriptData,
+                   SlotNo (SlotNo), TxId, TxIn, Value, WitCtxMint, WitCtxStake, WitCtxTxIn)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
@@ -80,7 +95,13 @@ data CBORObject = CBORBlockByron Byron.EpochSlots
 -- genesis delegate certificates and MIR certificates.
 newtype CertificateFile (direction :: FileDirection) = CertificateFile
   { unCertificateFile :: File direction
-  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+  } deriving newtype (Eq, Ord, IsString, Show)
+
+toCertificateFileIn :: CertificateFile 'InOut -> CertificateFile 'In
+toCertificateFileIn = coerce
+
+toCertificateFileOut :: CertificateFile 'InOut -> CertificateFile 'Out
+toCertificateFileOut = coerce
 
 newtype CurrentKesPeriod = CurrentKesPeriod { unCurrentKesPeriod :: Word64 } deriving (Eq, Show)
 
@@ -92,7 +113,13 @@ instance FromJSON CurrentKesPeriod where
 
 newtype GenesisFile (direction :: FileDirection) = GenesisFile
   { unGenesisFile :: File direction
-  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+  } deriving newtype (Eq, Ord, IsString, Show)
+
+toGenesisFileIn :: GenesisFile 'InOut -> GenesisFile 'In
+toGenesisFileIn = coerce
+
+toGenesisFileOut :: GenesisFile 'InOut -> GenesisFile 'Out
+toGenesisFileOut = coerce
 
 data OpCertNodeAndOnDiskCounterInformation
   -- | The on disk operational certificate has a counter
@@ -225,15 +252,33 @@ instance Crypto.Crypto crypto =>  ToJSON (Params crypto) where
 
 newtype SigningKeyFile (direction :: FileDirection) = SigningKeyFile
   { unSigningKeyFile :: File direction
-  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+  } deriving newtype (Eq, Ord, IsString, Show)
+
+toSigningKeyFileIn :: SigningKeyFile 'InOut -> SigningKeyFile 'In
+toSigningKeyFileIn = coerce
+
+toSigningKeyFileOut :: SigningKeyFile 'InOut -> SigningKeyFile 'Out
+toSigningKeyFileOut = coerce
 
 newtype UpdateProposalFile (direction :: FileDirection) = UpdateProposalFile
   { unUpdateProposalFile :: File direction
-  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+  } deriving newtype (Eq, Ord, IsString, Show)
+
+toUpdateProposalFileIn :: UpdateProposalFile 'InOut -> UpdateProposalFile 'In
+toUpdateProposalFileIn = coerce
+
+toUpdateProposalFileOut :: UpdateProposalFile 'InOut -> UpdateProposalFile 'Out
+toUpdateProposalFileOut = coerce
 
 newtype VerificationKeyFile (direction :: FileDirection) = VerificationKeyFile
   { unVerificationKeyFile :: File direction
-  } deriving newtype (Eq, Ord, IsString, Show, HasFileMode)
+  } deriving newtype (Eq, Ord, IsString, Show)
+
+toVerificationKeyFileIn :: VerificationKeyFile 'InOut -> VerificationKeyFile 'In
+toVerificationKeyFileIn = coerce
+
+toVerificationKeyFileOut :: VerificationKeyFile 'InOut -> VerificationKeyFile 'Out
+toVerificationKeyFileOut = coerce
 
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
@@ -356,11 +401,23 @@ data EpochLeadershipSchedule
 
 newtype TxBodyFile (direction :: FileDirection) = TxBodyFile
   { unTxBodyFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+  } deriving newtype (Eq, Ord, Show, IsString)
+
+toTxBodyFileIn :: TxBodyFile 'InOut -> TxBodyFile 'In
+toTxBodyFileIn = coerce
+
+toTxBodyFileOut :: TxBodyFile 'InOut -> TxBodyFile 'Out
+toTxBodyFileOut = coerce
 
 newtype TxFile (direction :: FileDirection) = TxFile
   { txFile :: File direction
-  } deriving newtype (Eq, Ord, Show, IsString, HasFileMode)
+  } deriving newtype (Eq, Ord, Show, IsString)
+
+toTxFileIn :: TxFile 'InOut -> TxFile 'In
+toTxFileIn = coerce
+
+toTxFileOut :: TxFile 'InOut -> TxFile 'Out
+toTxFileOut = coerce
 
 data TxMempoolQuery =
       TxMempoolQueryTxExists TxId
