@@ -84,9 +84,6 @@ data TxGenPlutusType
   = LimitSaturationLoop                         -- ^ Generate Txs for a Plutus loop script, choosing settings to max out per Tx script budget
   | LimitTxPerBlock_8                           -- ^ Generate Txs for a Plutus loop script, choosing settings to best fit 8 Txs into block script budget
   | BenchCustomCall                             -- ^ Built-in script for benchmarking various complexity of data passed via Plutus API
-  | BenchLoop
-  | BenchECDSA
-  | BenchSchnorr
   | CustomScript
   deriving (Show, Eq, Enum, Generic, FromJSON, ToJSON)
 
