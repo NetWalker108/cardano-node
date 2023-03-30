@@ -37,7 +37,7 @@ backend_nomadexec() {
       profile_container_specs_file="${backend_dir}"/container-specs.json
       setenvjqstr 'profile_container_specs_file' "${profile_container_specs_file}"
       setenvjqstr 'nomad_environment'   "local"
-      setenvjqstr 'one_tracer_per_node' "false"
+      setenvjqstr 'one_tracer_per_node' "true"
     ;;
 
     allocate-run )

@@ -57,7 +57,11 @@ backend_nomadpodman() {
         "${dir}"/container-specs.json              \
       > "${dir}"/nomad/nomad-job.json
       # The job file is "slightly" modified to suit the running environment.
-      backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "default"
+      backend_nomad       allocate-run-nomad-job-patch-namespace "${dir}" "default"
+      backend_nomadpodman allocate-run-nomad-job-patch-podman    "${dir}"
+      # It needs to mount the tracer directory if "one_tracer_per_node" is
+      # false, mount the genesis and CARDANO_MAINNET_MIRROR (if needed).
+      nomad_job_file_create_mounts "${dir}"
 
       backend_nomad allocate-run "${dir}"
     ;;
@@ -96,9 +100,6 @@ backend_nomadpodman() {
           fi
         fi
       fi
-      # It needs to mount the tracer directory if "one_tracer_per_node" is
-      # false, mount the genesis and CARDANO_MAINNET_MIRROR (if needed).
-      nomad_job_file_create_mounts "${dir}"
     ;;
 
     * )
