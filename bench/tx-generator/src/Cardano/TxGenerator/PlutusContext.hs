@@ -90,13 +90,13 @@ readScriptData jsonFilePath
 -- will calibrate loop for any fully specified fitting strategy otherwise
 plutusAutoScaleBlockfit ::
      ProtocolParameters
-  -> String
+  -> FilePath
   -> ScriptInAnyLang
   -> PlutusAutoBudget
   -> PlutusBudgetFittingStrategy
   -> Int
   -> Either TxGenError (PlutusBudgetSummary, PlutusAutoBudget, ExecutionUnits)
-plutusAutoScaleBlockfit pparams str script pab strategy txInputs
+plutusAutoScaleBlockfit pparams fp script pab strategy txInputs
   = do
     summaries <- mapM go scalingStrats
     let
@@ -123,7 +123,7 @@ plutusAutoScaleBlockfit pparams str script pab strategy txInputs
     go strat = do
       result@(pab', _, _) <- plutusAutoBudgetMaxOut pparams script pab strat txInputs
       preRun <- preExecutePlutusScript pparams script (autoBudgetDatum pab') (autoBudgetRedeemer pab')
-      pure  ( plutusBudgetSummary pparams str strat result preRun txInputs
+      pure  ( plutusBudgetSummary pparams fp strat result preRun txInputs
             , pab'
             , preRun
             )
@@ -187,7 +187,7 @@ plutusAutoBudgetMaxOut _ _ _ _ _
 
 plutusBudgetSummary ::
      ProtocolParameters
-  -> String
+  -> FilePath
   -> PlutusBudgetFittingStrategy
   -> (PlutusAutoBudget, Int, [PlutusAutoLimitingFactor])
   -> ExecutionUnits
@@ -198,14 +198,13 @@ plutusBudgetSummary
     { protocolParamMaxBlockExUnits  = Just budgetPerBlock
     , protocolParamMaxTxExUnits     = Just budgetPerTx
     }
-  s
+  scriptId
   budgetStrategy
   (PlutusAutoBudget{..}, loopCounter, loopLimitingFactors)
   budgetUsedPerTxInput
   txInputs
   = PlutusBudgetSummary{..}
   where
-    scriptId                = s
     projectedTxSize         = Nothing           -- we defer this value until after splitting phase
     strategyMessage         = Nothing
     scriptArgDatum          = autoBudgetDatum
