@@ -10,7 +10,7 @@
   ##
   TraceOptions  = {
     "" =
-      { severity = "Notice";
+      { severity = "Info";
         backends = [
           "Stdout MachineFormat"
           "EKGBackend"
@@ -20,15 +20,43 @@
           ]);
       };
 
-    ## These are benchmarking-specific config deviations from the default.
+    ## These are comparision-specific config deviations from the default.
     ##
-    "BlockFetch".severity = "Info";
-    "BlockFetch.Client.CompletedBlockFetch".maxFrequency = 0;
-    "ChainSync".severity = "Info";
-    "ChainSync.Client.DownloadedHeader".maxFrequency = 0;
-    "Forge.Loop.BlockContext".severity = "Info";
-    "Forge.Loop.LedgerState".severity = "Info";
-    "Forge.Loop.LedgerView".severity = "Info";
-    "Startup".severity = "Info";
+    "Resources".backends = ["EKGBackend"];
+    "Net.Net.AcceptPolicy".severity = "Info";
+    "BlockFetch.Client".severity = "Silence";
+    "BlockFetch.Decision".severity = "Silence";
+    "BlockFetch.Remote".severity = "Silence";
+    "BlockFetch.Remote.Serialised".severity = "Silence";
+    "BlockFetch.Server".severity = "Silence";
+    "ChainDB".severity = "Info";
+    "ChainSync.Client".severity = "Silence";
+    "ChainSync.Remote".severity = "Silence";
+    "ChainSync.Remote.Serialised".severity = "Silence";
+    "ChainSync.Remote.ServerBlock".severity = "Silence";
+    "ChainSync.Remote.ServerHeader".severity = "Silence";
+    "Net.ConnectionManager.Local".severity = "Info";
+    "Net.ConnectionManager.Remote".severity = "Info";
+    "Net.DNSResolver".severity = "Info";
+    "Net.Subscription.DNS".severity = "Info";
+    "Net.Startup.DiffusionInit".severity = "Info";
+    "Net.ErrorPolicy.Remote".severity = "Info";
+    "Forge.Loop".severity = "Info";
+    "Net.Handshake.Remote".severity = "Silence";
+    "Net.Subscription.IP".severity = "Info";
+    "Net.InboundGovernor".severity = "Info";
+    "ChainSync.Local".severity = "Silence";
+    "Net.ErrorPolicy.Local".severity = "Info";
+    "Net.Handshake.Local".severity = "Silence";
+    "Net.Peers".severity = "Info";
+    "TxSubmission".severity = "Silence";
+    "Mempool".severity = "Info";
+    "Net.Mux".severity = "Silence";
+    "Net.Mux.Remote".severity = "Silence";
+    "Net.PeerSelection".severity = "Info";
+    "Net.Peers.PublicRoot".severity = "Info";
+    "Net.Server".severity = "Info";
+    "TxSubmission.TxInbound".severity = "Silence";
+    "TxSubmission.TxOutbound".severity = "Silence";
   };
 }
