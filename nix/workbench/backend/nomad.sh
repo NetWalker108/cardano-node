@@ -96,13 +96,11 @@ backend_nomad() {
     # - allocate-run-directory-nomad-nodes     RUN-DIR              (Nomad only)
     # - allocate-run-directory-supervisor      RUN-DIR              (Nomad only)
     # - allocate-run-directory-nodes           RUN-DIR              (Nomad only)
-    # - allocate-run-directory-genesis         RUN-DIR              (Nomad only)
     # - allocate-run-directory-generator       RUN-DIR              (Nomad only)
     # - allocate-run-directory-tracers         RUN-DIR              (Nomad only)
     # - allocate-run-nomad-job-patch-name      RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-namespace RUN-DIR NAME         (Nomad only)
     # - allocate-run-nomad-job-patch-nix       RUN-DIR              (Nomad only)
-    # - allocate-run-nomad-job-patch-podman    RUN-DIR              (Nomad only)
     # - deploy-genesis                         RUN-DIR
     # - describe-run                           RUN-DIR
     ############################################################################
@@ -137,7 +135,6 @@ backend_nomad() {
       backend_nomad allocate-run-directory-nomad-nodes       "${dir}"
       backend_nomad allocate-run-directory-supervisor        "${dir}"
       backend_nomad allocate-run-directory-nodes             "${dir}"
-      backend_nomad allocate-run-directory-genesis           "${dir}"
       backend_nomad allocate-run-directory-generator         "${dir}"
       backend_nomad allocate-run-directory-tracers           "${dir}"
 
@@ -177,19 +174,6 @@ backend_nomad() {
           mkdir "${dir}"/nomad/tracer
         fi
       fi
-      # Select which version of the Nomad job spec file we are running and copy
-      # it to "nomad/nomad-job.json". The job file will later be "slightly"
-      # modified to suit the running environment.
-      if test "${one_tracer_per_node}" = "true"
-      then
-        jq -r ".nomadJob.${nomad_task_driver}.oneTracerPerNode" \
-          "${dir}"/container-specs.json                         \
-        > "${dir}"/nomad/nomad-job.json
-      else
-        jq -r ".nomadJob.${nomad_task_driver}.oneTracerPerCluster" \
-          "${dir}"/container-specs.json                            \
-        > "${dir}"/nomad/nomad-job.json
-      fi
     ;;
 
     allocate-run-directory-supervisor )
@@ -228,22 +212,6 @@ backend_nomad() {
         # and we want to hold a copy of what was actually run.
         mkdir "${dir}"/"${node}"
       done
-    ;;
-
-    allocate-run-directory-genesis )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_environment=$(envjqr 'nomad_environment')
-      local nomad_task_driver=$(envjqr   'nomad_task_driver')
-
-      # Make sure the "genesis" dir is there when the Nomad job is started and
-      # the podman task driver is used (always local, not used for cloud)
-      # because this directory is going to be mounted
-      if test "${nomad_environment}" = "local" && test "${nomad_task_driver}" = "podman"
-      then
-        mkdir "${dir}"/genesis
-        mkdir "${dir}"/genesis/utxo-keys
-      fi
     ;;
 
     allocate-run-directory-generator )
@@ -329,133 +297,6 @@ backend_nomad() {
           jq ".[\"job\"][\"${nomad_job_name}\"][\"group\"][\"${group_name}\"][\"task\"][\"${task_name}\"][\"config\"][\"nix_installables\"] = \$installables_array" --argjson installables_array "${installables_array}" "${dir}"/nomad/nomad-job.json | sponge "${dir}"/nomad/nomad-job.json
         done
       done
-    ;;
-
-    deploy-genesis )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_environment=$(envjqr 'nomad_environment')
-      local nomad_task_driver=$(envjqr 'nomad_task_driver')
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-
-      # Nomad jobs when `exec` driver is configured run as `nobody:nobody`
-      # Every job is creating an HTTP server to download a .tar un untar it
-      # with the permissions/ownership we want!
-      mv "${dir}"/genesis "${dir}"/genesis.bak
-      mkdir "${dir}"/genesis
-      mkdir "${dir}"/genesis/byron
-      mkdir "${dir}"/genesis/utxo-keys
-      mkdir "${dir}"/genesis/node-keys
-      cp -a "${dir}"/genesis.bak/genesis.alonzo.json \
-            "${dir}"/genesis/genesis.alonzo.json
-      cp -a "${dir}"/genesis.bak/genesis.conway.json \
-            "${dir}"/genesis/genesis.conway.json
-      cp -a "${dir}"/genesis.bak/genesis-shelley.json \
-            "${dir}"/genesis/genesis-shelley.json
-      cp -a "${dir}"/genesis.bak/byron/genesis.json \
-            "${dir}"/genesis/byron/genesis.json
-      cp -a \
-        "${dir}"/genesis.bak/utxo-keys/*.skey \
-        "${dir}"/genesis/utxo-keys/
-      cp -a \
-        "${dir}"/genesis.bak/utxo-keys/*.vkey \
-        "${dir}"/genesis/utxo-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.skey \
-        "${dir}"/genesis/node-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.vkey \
-        "${dir}"/genesis/node-keys/
-      cp -a \
-        "${dir}"/genesis.bak/node-keys/*.opcert \
-        "${dir}"/genesis/node-keys/
-
-      # The podman driver should already have the genesis dir mounted!
-      if test "${nomad_task_driver}" = "exec"
-      then
-        if test "${nomad_environment}" = "local"
-        then
-          backend_nomad deploy-genesis-local "${dir}"
-        elif test "${nomad_environment}" = "cloud"
-        then
-          backend_nomad deploy-genesis-cloud "${dir}"
-        fi
-      fi
-    ;;
-
-    deploy-genesis-local )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_task_driver=$(envjqr 'nomad_task_driver')
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-      local server_name=$(envjqr 'nomad_server_name')
-      local client_name=$(envjqr 'nomad_client_name')
-
-      # Add genesis to HTTP cache server
-      local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
-      if ! backend_nomad webfs is-running
-      then
-        if ! backend_nomad webfs start
-        then
-          if test "${nomad_agents_were_already_running}" = "false"
-          then
-            backend_nomad nomad agents stop \
-              "${server_name}" "${client_name}" "${nomad_task_driver}"
-          fi
-          fatal "Failed to start HTTP server"
-        fi
-      fi
-      if ! backend_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
-      then
-        if test "${nomad_agents_were_already_running}" = "false"
-        then
-          backend_nomad nomad agents stop \
-            "${server_name}" "${client_name}" "${nomad_task_driver}"
-        fi
-        fatal "Failed to add genesis to HTTP server"
-      fi
-      backend_nomad deploy-genesis-wget "${dir}" \
-        "http://127.0.0.1:12000/${nomad_job_name}.tar.zst"
-    ;;
-
-    deploy-genesis-cloud )
-      local usage="USAGE: wb backend $op RUN-DIR"
-      local dir=${1:?$usage}; shift
-      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
-
-      local genesis_file_name="${nomad_job_name}.tar.zst"
-      find "${dir}"/genesis -type f -printf "%P\n"    \
-        | tar --create --zstd                         \
-          --file="${dir}"/"${genesis_file_name}"      \
-          --owner=65534 --group=65534 --mode="u=rwx"  \
-          --directory="${dir}"/genesis --files-from=-
-
-      local s3_region="eu-central-1"
-      local s3_host="s3.${s3_region}.amazonaws.com";
-      local s3_bucket_name="iog-cardano-perf";
-      local s3_access_key="${AWS_ACCESS_KEY_ID}";
-      local s3_access_key_secret="${AWS_SECRET_ACCESS_KEY}"
-      local s3_storage_class="STANDARD"
-      local return_code=0
-      aws s3 cp                                                               \
-        "${dir}"/"${genesis_file_name}"                                       \
-        s3://"${s3_bucket_name}"                                              \
-        --content-type "application/zstd"                                     \
-        --region "${s3_region}"                                               \
-        --expected-size "$(stat --printf=%s "${dir}"/"${genesis_file_name}")" \
-      >/dev/null                                                              \
-      || return_code="$?"
-      # https://docs.aws.amazon.com/cli/latest/userguide/cli-services-s3-commands.html#using-s3-commands-managing-objects-copy
-      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/cp.html
-      if test "${return_code}" = "0"
-      then
-        # A server response was obtained.
-        msg "File \"${genesis_file_name}\" uploaded"
-      else
-        fatal "Failed to upload ${genesis_file_name}"
-      fi
-      backend_nomad deploy-genesis-wget "${dir}" \
-        "https://${s3_bucket_name}.${s3_host}/${genesis_file_name}"
     ;;
 
     deploy-genesis-wget )

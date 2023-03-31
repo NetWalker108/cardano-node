@@ -17,6 +17,68 @@ backend_nomadcloud() {
       echo 'nomadcloud'
     ;;
 
+    # Generic backend sub-commands, shared code between Nomad sub-backends.
+
+    deploy-genesis )
+      backend_nomad deploy-genesis       "$@"
+    ;;
+
+    describe-run )
+      backend_nomad describe-run         "$@"
+    ;;
+
+    is-running )
+      backend_nomad is-running           "$@"
+    ;;
+
+    start )
+      backend_nomad start                "$@"
+    ;;
+
+    cleanup-cluster )
+      backend_nomad cleanup-cluster      "$@"
+    ;;
+
+    start-nodes )
+      backend_nomad start-nodes          "$@"
+    ;;
+
+    start-node )
+      backend_nomad start-node           "$@"
+    ;;
+
+    stop-node )
+      backend_nomad stop-node            "$@"
+    ;;
+
+    start-generator )
+      backend_nomad start-generator      "$@"
+    ;;
+
+    get-node-socket-path )
+      backend_nomad get-node-socket-path "$@"
+    ;;
+
+    wait-node )
+      backend_nomad wait-node            "$@"
+    ;;
+
+    wait-node-stopped )
+      backend_nomad wait-node-stopped    "$@"
+    ;;
+
+    wait-pools-stopped )
+      backend_nomad wait-pools-stopped   "$@"
+    ;;
+
+    stop-cluster )
+      backend_nomad stop-cluster         "$@"
+    ;;
+
+    cleanup-cluster )
+      backend_nomad cleanup-cluster      "$@"
+    ;;
+
     # Sets jq envars "profile_container_specs_file" ,"nomad_environment",
     # "nomad_task_driver" and "one_tracer_per_node"
     setenv-defaults )
@@ -39,7 +101,7 @@ backend_nomadcloud() {
       setenvjqstr 'nomad_environment'   "cloud"
       setenvjqstr 'one_tracer_per_node' "true" # TODO: Not implemented yet!
 
-      backend_nomad_cloud setenv-nomadcloud "${profile_container_specs_file}"
+      backend_nomadcloud setenv-nomadcloud "${profile_container_specs_file}"
     ;;
 
     # Checks for set the values for "NOMA..." and
@@ -141,18 +203,61 @@ backend_nomadcloud() {
 
       # Create nomad folder and copy the Nomad job spec file to run.
       mkdir -p "${dir}"/nomad
-      # Create a nicely sorted and indented copy.
+      # Select which version of the Nomad job spec file we are running and
+      # create a nicely sorted and indented copy it "nomad/nomad-job.json".
       jq -r ".nomadJob.exec.oneTracerPerNode"      \
         "${dir}"/container-specs.json              \
       > "${dir}"/nomad/nomad-job.json
-      # The job file is "slightly" modified to suit the running environment.
+      # The job file is "slightly" modified (jq) to suit the running environment.
       backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "${NOMAD_NAMESPACE}"
       backend_nomad allocate-run-nomad-job-patch-nix       "${dir}"
 
       backend_nomad allocate-run "${dir}"
     ;;
 
+    deploy-genesis )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+
+      local genesis_file_name="${nomad_job_name}.tar.zst"
+      find "${dir}"/genesis -type f -printf "%P\n"    \
+        | tar --create --zstd                         \
+          --file="${dir}"/"${genesis_file_name}"      \
+          --owner=65534 --group=65534 --mode="u=rwx"  \
+          --directory="${dir}"/genesis --files-from=-
+
+      local s3_region="eu-central-1"
+      local s3_host="s3.${s3_region}.amazonaws.com";
+      local s3_bucket_name="iog-cardano-perf";
+      local s3_access_key="${AWS_ACCESS_KEY_ID}";
+      local s3_access_key_secret="${AWS_SECRET_ACCESS_KEY}"
+      local s3_storage_class="STANDARD"
+      local return_code=0
+      aws s3 cp                                                               \
+        "${dir}"/"${genesis_file_name}"                                       \
+        s3://"${s3_bucket_name}"                                              \
+        --content-type "application/zstd"                                     \
+        --region "${s3_region}"                                               \
+        --expected-size "$(stat --printf=%s "${dir}"/"${genesis_file_name}")" \
+      >/dev/null                                                              \
+      || return_code="$?"
+      # https://docs.aws.amazon.com/cli/latest/userguide/cli-services-s3-commands.html#using-s3-commands-managing-objects-copy
+      # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3/cp.html
+      if test "${return_code}" = "0"
+      then
+        # A server response was obtained.
+        msg "File \"${genesis_file_name}\" uploaded"
+      else
+        fatal "Failed to upload ${genesis_file_name}"
+      fi
+      backend_nomad deploy-genesis-wget "${dir}" \
+        "https://${s3_bucket_name}.${s3_host}/${genesis_file_name}"
+    ;;
+
     * )
+      # TODO: Replace with `usage_nomadcloud` and make the nomad helper commands
+      # use a new top level sub-command `wb nomad`
       backend_nomad "${op}" "$@"
     ;;
 

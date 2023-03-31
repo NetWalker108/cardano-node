@@ -17,6 +17,64 @@ backend_nomadexec() {
       echo 'nomadexec'
     ;;
 
+    # Generic backend sub-commands, shared code between Nomad sub-backends.
+
+    describe-run )
+      backend_nomad describe-run         "$@"
+    ;;
+
+    is-running )
+      backend_nomad is-running           "$@"
+    ;;
+
+    start )
+      backend_nomad start                "$@"
+    ;;
+
+    cleanup-cluster )
+      backend_nomad cleanup-cluster      "$@"
+    ;;
+
+    start-nodes )
+      backend_nomad start-nodes          "$@"
+    ;;
+
+    start-node )
+      backend_nomad start-node           "$@"
+    ;;
+
+    stop-node )
+      backend_nomad stop-node            "$@"
+    ;;
+
+    start-generator )
+      backend_nomad start-generator      "$@"
+    ;;
+
+    get-node-socket-path )
+      backend_nomad get-node-socket-path "$@"
+    ;;
+
+    wait-node )
+      backend_nomad wait-node            "$@"
+    ;;
+
+    wait-node-stopped )
+      backend_nomad wait-node-stopped    "$@"
+    ;;
+
+    wait-pools-stopped )
+      backend_nomad wait-pools-stopped   "$@"
+    ;;
+
+    stop-cluster )
+      backend_nomad stop-cluster         "$@"
+    ;;
+
+    cleanup-cluster )
+      backend_nomad cleanup-cluster      "$@"
+    ;;
+
     # Sets jq envars "profile_container_specs_file" ,"nomad_environment",
     # "nomad_task_driver" and "one_tracer_per_node"
     setenv-defaults )
@@ -52,18 +110,55 @@ backend_nomadexec() {
 
       # Create nomad folder and copy the Nomad job spec file to run.
       mkdir -p "${dir}"/nomad
-      # Create a nicely sorted and indented copy.
+      # Select which version of the Nomad job spec file we are running and
+      # create a nicely sorted and indented copy it "nomad/nomad-job.json".
       jq -r ".nomadJob.exec.oneTracerPerNode"      \
         "${dir}"/container-specs.json              \
       > "${dir}"/nomad/nomad-job.json
-      # The job file is "slightly" modified to suit the running environment.
+      # The job file is "slightly" modified (jq) to suit the running environment.
       backend_nomad allocate-run-nomad-job-patch-namespace "${dir}" "default"
       backend_nomad allocate-run-nomad-job-patch-nix       "${dir}"
 
       backend_nomad allocate-run "${dir}"
     ;;
 
+    deploy-genesis )
+      local usage="USAGE: wb backend $op RUN-DIR"
+      local dir=${1:?$usage}; shift
+      local nomad_job_name=$(jq -r ". [\"job\"] | keys[0]" "${dir}"/nomad/nomad-job.json)
+      local server_name=$(envjqr 'nomad_server_name')
+      local client_name=$(envjqr 'nomad_client_name')
+
+      # Add genesis to HTTP cache server
+      local nomad_agents_were_already_running=$(envjqr 'nomad_agents_were_already_running')
+      if ! backend_nomad webfs is-running
+      then
+        if ! backend_nomad webfs start
+        then
+          if test "${nomad_agents_were_already_running}" = "false"
+          then
+            backend_nomad nomad agents stop \
+              "${server_name}" "${client_name}" "exec"
+          fi
+          fatal "Failed to start HTTP server"
+        fi
+      fi
+      if ! backend_nomad webfs add-genesis-dir "${dir}"/genesis "${nomad_job_name}"
+      then
+        if test "${nomad_agents_were_already_running}" = "false"
+        then
+          backend_nomad nomad agents stop \
+            "${server_name}" "${client_name}" "exec"
+        fi
+        fatal "Failed to add genesis to HTTP server"
+      fi
+      backend_nomad deploy-genesis-wget "${dir}" \
+        "http://127.0.0.1:12000/${nomad_job_name}.tar.zst"
+    ;;
+
     * )
+      # TODO: Replace with `usage_nomadexec` and make the nomad helper commands
+      # use a new top level sub-command `wb nomad`
       backend_nomad "${op}" "$@"
     ;;
 
