@@ -2,11 +2,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Api.TxBody (tests) where
 
@@ -17,11 +15,11 @@ import           Data.Foldable (toList)
 import           Data.Functor ((<&>))
 import qualified Data.List as List
 import           Data.Maybe.Strict (StrictMaybe (SNothing))
+import           Data.String (IsString (..))
 import           Data.Type.Equality (testEquality)
 import           Hedgehog (PropertyT, evalEither, forAll, property, tripping, (===))
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters, TxBody (ShelleyTxBody))
@@ -30,9 +28,9 @@ import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import           Cardano.Ledger.Alonzo.TxBody (adHash)
 import qualified Cardano.Ledger.Core as Ledger
 
-import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
-
 import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAlonzo)
+
+import           Test.Gen.Cardano.Api.Typed (genTxBodyContent)
 
 
 -- * Properties
@@ -47,7 +45,7 @@ import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAlonzo)
 -- Roundtrip data requires normalization, too.
 test_roundtrip_TxBody_make_get :: [TestTree]
 test_roundtrip_TxBody_make_get =
-  [ testProperty (show era) $
+  [ testPropertyNamed (show era) (fromString (show era)) $
     property $ do
       content <- forAll $ genTxBodyContent era
       tripping
@@ -76,7 +74,7 @@ test_roundtrip_TxBody_make_get =
 -- For instance, no special /None/ values.
 test_roundtrip_TxBody_make_get_make :: [TestTree]
 test_roundtrip_TxBody_make_get_make =
-  [ testProperty (show era) $
+  [ testPropertyNamed (show era) (fromString (show era)) $
     property $ do
 
       -- generate a TxBodyContent to use as a seed
@@ -283,7 +281,6 @@ viewBodyContent body =
     , txFee = txFee body
     , txIns = map viewTxIn $ txIns body
     , txInsCollateral = txInsCollateral body
-    , txInsReference = txInsReference body
     , txMetadata = txMetadata body
     , txMintValue = viewMintValue $ txMintValue body
     , txOuts = txOuts body
@@ -295,8 +292,6 @@ viewBodyContent body =
     , txValidityRange = txValidityRange body
     , txWithdrawals = viewWithdrawals $ txWithdrawals body
     , txInsReference = viewInsReference $ txInsReference body
-    , txTotalCollateral = txTotalCollateral body
-    , txReturnCollateral = txReturnCollateral body
     }
 
 viewTxIn
@@ -346,7 +341,6 @@ buildBodyContent protocolParams body =
     , txFee = txFee body
     , txIns = map buildTxIn $ txIns body
     , txInsCollateral = txInsCollateral body
-    , txInsReference = txInsReference body
     , txMetadata = txMetadata body
     , txMintValue = buildMintValue $ txMintValue body
     , txOuts = txOuts body
@@ -358,8 +352,6 @@ buildBodyContent protocolParams body =
     , txValidityRange = txValidityRange body
     , txWithdrawals = buildWithdrawals $ txWithdrawals body
     , txInsReference = buildInsReference $ txInsReference body
-    , txTotalCollateral = txTotalCollateral body
-    , txReturnCollateral = txReturnCollateral body
     }
 
 buildTxIn
@@ -398,4 +390,9 @@ buildMintValue = \case
 
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.TxBody" $ mconcat
+  [ test_roundtrip_TxBody_make_get
+  , test_roundtrip_TxBody_make_get
+  , test_roundtrip_TxBody_make_get_make
+  , test_roundtrip_TxBody_make_get_make
+  ]
