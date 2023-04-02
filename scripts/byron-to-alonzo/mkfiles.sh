@@ -664,7 +664,7 @@ if [ "$1" = "alonzo" ]; then
   echo "TestMaryHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestAlonzoHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "ExperimentalHardForks: True" >> ${ROOT}/configuration.yaml
-  echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
+  echo "ExperimentalProtocols: True" >> ${ROOT}/configuration.yaml
 
   $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'

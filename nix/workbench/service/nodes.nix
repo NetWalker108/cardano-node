@@ -167,9 +167,9 @@ let
         //
         {
           ExperimentalHardForks = true;
-          TestEnableDevelopmentNetworkProtocols = true;
-          TurnOnLogMetrics                      = true;
-          SnapshotFrequency                     = 1100;
+          ExperimentalProtocols = true;
+          TurnOnLogMetrics      = true;
+          SnapshotFrequency     = 1100;
         };
       tracing-transform = {
         trace-dispatcher = cfg:

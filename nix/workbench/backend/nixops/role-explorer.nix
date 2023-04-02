@@ -88,7 +88,7 @@ in {
   #         "LastKnownBlockVersion-Minor"
   #         "LastKnownBlockVersion-Alt"
   #         "ExperimentalHardForks"
-  #         "TestEnableDevelopmentNetworkProtocols"
+  #         "ExperimentalProtocols"
   #         "TestShelleyHardForkAtEpoch"
   #         "TestAllegraHardForkAtEpoch"
   #         "TestMaryHardForkAtEpoch"
@@ -148,7 +148,7 @@ in {
   #            TracingVerbosity = "NormalVerbosity";
 
   #            ExperimentalHardForks = true;
-  #            TestEnableDevelopmentNetworkProtocols = true;
+  #            ExperimentalProtocols = true;
 
   #            TraceAcceptPolicy                 = false;
   #            TraceBlockFetchClient             = true;

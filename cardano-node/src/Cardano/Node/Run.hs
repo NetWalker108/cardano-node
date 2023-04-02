@@ -443,7 +443,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               (readTVar useLedgerVar)
               , srnDiffusionTracers            = diffusionTracers tracers
               , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
-              , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
+              , srnEnableInDevelopmentVersions = ncExperimentalProtocols nc
               , srnTraceChainDB                = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
@@ -483,7 +483,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
               , srnDiffusionTracers            = diffusionTracers tracers
               , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
-              , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
+              , srnEnableInDevelopmentVersions = ncExperimentalProtocols nc
               , srnTraceChainDB                = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
@@ -509,13 +509,13 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
                                   $ supportedNodeToClientVersions (Proxy @blk)
             (_, Nothing)         -> Map.keys
                                   $ supportedNodeToClientVersions (Proxy @blk)
-    when (  ncTestEnableDevelopmentNetworkProtocols nc
+    when (  ncExperimentalProtocols nc
          && not (null developmentNtnVersions))
        $ traceWith (startupTracer tracers)
                    (WarningDevelopmentNodeToNodeVersions
                      developmentNtnVersions)
 
-    when (  ncTestEnableDevelopmentNetworkProtocols nc
+    when (  ncExperimentalProtocols nc
          && not (null developmentNtcVersions))
        $ traceWith (startupTracer tracers)
                    (WarningDevelopmentNodeToClientVersions
@@ -552,7 +552,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
     -> Map k v
     -> Map k v
   limitToLatestReleasedVersion prj =
-      if ncTestEnableDevelopmentNetworkProtocols nc then id
+      if ncExperimentalProtocols nc then id
       else
       case prj $ latestReleasedNodeVersion (Proxy @blk) of
         Nothing       -> id

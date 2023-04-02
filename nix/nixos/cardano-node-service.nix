@@ -24,7 +24,7 @@ let
               TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
               TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
               TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-              TestEnableDevelopmentNetworkProtocols = true;
+              ExperimentalProtocols = true;
               MaxConcurrencyBulkSync = 2;
             })) cfg.extraNodeConfig;
         baseInstanceConfig =
