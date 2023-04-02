@@ -87,7 +87,7 @@ in {
   #         "LastKnownBlockVersion-Major"
   #         "LastKnownBlockVersion-Minor"
   #         "LastKnownBlockVersion-Alt"
-  #         "TestEnableDevelopmentHardForkEras"
+  #         "ExperimentalHardForks"
   #         "TestEnableDevelopmentNetworkProtocols"
   #         "TestShelleyHardForkAtEpoch"
   #         "TestAllegraHardForkAtEpoch"
@@ -147,7 +147,7 @@ in {
   #            minSeverity = "Debug";
   #            TracingVerbosity = "NormalVerbosity";
 
-  #            TestEnableDevelopmentHardForkEras = true;
+  #            ExperimentalHardForks = true;
   #            TestEnableDevelopmentNetworkProtocols = true;
 
   #            TraceAcceptPolicy                 = false;

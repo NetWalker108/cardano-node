@@ -21,9 +21,11 @@ module Cardano.Node.Configuration.POM
   )
 where
 
+import           Control.Monad (when)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (Bifunctor (..))
+import           Data.Maybe (isJust)
 import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -49,6 +51,23 @@ import           Ouroboros.Consensus.Mempool (MempoolCapacityBytes (..),
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode (..))
+
+-- | Specifier to indicate fields have been removed or renamed.
+--
+-- The field is used to output an error so that a user isn't surprised when
+-- they upgrade and the removed or renamed field no longer works.
+data RemovedField = RemovedField { rfField :: Key, rfErr :: String }
+  deriving Show
+
+-- | Parse fields that have been removed from the configuration file and
+-- fail if they are present.
+--
+-- This is used to notify users that a field has been removed from the
+-- configuration file.
+failOnRemovedFields :: Aeson.Object -> [RemovedField] -> Aeson.Parser ()
+failOnRemovedFields obj = mapM_ $ \(RemovedField field err) -> do
+  mVal :: Maybe Aeson.Value <- obj .:? field
+  when (isJust mVal) $ fail err
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
   deriving (Eq, Show, Generic)
@@ -383,8 +402,16 @@ instance FromJSON PartialNodeConfiguration where
              }
 
       parseHardForkProtocol v = do
-        npcTestEnableDevelopmentHardForkEras
-          <- v .:? "TestEnableDevelopmentHardForkEras"
+
+        failOnRemovedFields v
+          [ RemovedField
+              { rfField = "TestEnableDevelopmentHardForkEras"
+              , rfErr = "TestEnableDevelopmentHardForkEras has been renamed to ExperimentalHardForks"
+              }
+          ]
+
+        npcExperimentalHardForks
+          <- v .:? "ExperimentalHardForks"
                .!= False
 
         npcTestShelleyHardForkAtEpoch   <- v .:? "TestShelleyHardForkAtEpoch"
@@ -406,7 +433,7 @@ instance FromJSON PartialNodeConfiguration where
         npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
 
         pure NodeHardForkProtocolConfiguration {
-               npcTestEnableDevelopmentHardForkEras,
+               npcExperimentalHardForks,
 
                npcTestShelleyHardForkAtEpoch,
                npcTestShelleyHardForkAtVersion,

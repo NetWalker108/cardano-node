@@ -166,7 +166,7 @@ let
           ]
         //
         {
-          TestEnableDevelopmentHardForkEras     = true;
+          ExperimentalHardForks = true;
           TestEnableDevelopmentNetworkProtocols = true;
           TurnOnLogMetrics                      = true;
           SnapshotFrequency                     = 1100;
